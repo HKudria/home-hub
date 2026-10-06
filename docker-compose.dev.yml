@@ -1,0 +1,12 @@
+# Dev test runner: runs the test suite inside a python:3.12 container.
+# Usage (from the repo root):
+#   docker compose -f docker-compose.dev.yml run --rm tests
+services:
+  tests:
+    image: python:3.12-slim
+    working_dir: /app
+    volumes:
+      - .:/app
+    command: >
+      sh -c "pip install --no-cache-dir -r requirements.txt &&
+             python -m pytest -v"
