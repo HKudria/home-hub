@@ -61,6 +61,12 @@ class MedicineServiceTest(unittest.TestCase):
         svc.discard(mid, "herman")
         self.assertEqual(svc.get(mid)["quantity"], 0)
 
+    def test_update_snooze_fields(self):
+        svc, _ = self.make_svc()
+        mid = svc.add({"name": "A", "expiry_date": "2026-10-06"})
+        svc.update(mid, {"snooze_expiry_until": "2026-11-06"})
+        self.assertEqual(svc.get(mid)["snooze_expiry_until"], "2026-11-06")
+
 
 if __name__ == "__main__":
     unittest.main()

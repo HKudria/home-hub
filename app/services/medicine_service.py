@@ -6,6 +6,7 @@ COLUMNS = [
     "description_pl", "description_ru", "description_uk", "description_en",
     "expiry_date", "opened_at", "discard_after_days", "quantity", "unit",
     "low_stock_threshold", "photo_path", "ai_status",
+    "snooze_expiry_until", "snooze_opened_until",
 ]
 
 class MedicineService:
