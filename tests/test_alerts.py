@@ -37,8 +37,7 @@ class AlertTest(unittest.TestCase):
         self.assertEqual(evaluate(conn, "2026-10-07"), [])  # not on a 30-day boundary
 
     def test_expiry_snooze(self):
-        # Snooze set via SQL (MedicineService.add does not persist snooze
-        # columns): expiry heads-up on 2026-09-29 snoozed until 2026-10-05.
+        # Expiry heads-up on 2026-09-29 snoozed until 2026-10-05.
         # Suppressed through the snooze end date (inclusive); re-fires as
         # expiry_today on the expiry date itself, per spec "snoozed alerts
         # re-fire after the snooze period".
@@ -59,6 +58,31 @@ class AlertTest(unittest.TestCase):
         self.assertEqual([a.kind for a in evaluate(conn, "2026-10-06")], ["low_stock"])
         conn.execute("UPDATE medicines SET low_stock_notified=1 WHERE id=?", (mid,))
         conn.commit()
+        self.assertEqual(evaluate(conn, "2026-10-06"), [])
+
+    def test_snooze_past_expiry_refires_once(self):
+        # Snooze extends past the expiry date: suppressed while snoozed,
+        # re-fires once as "expired" on the first day after the snooze ends.
+        conn, svc, mid = self.setup_med(expiry_date="2026-10-06",
+                                        snooze_expiry_until="2026-11-06")
+        self.assertEqual(evaluate(conn, "2026-11-05"), [])   # still snoozed
+        kinds = [a.kind for a in evaluate(conn, "2026-11-07")]  # day after snooze end
+        self.assertEqual(kinds, ["expired"])
+        self.assertEqual(evaluate(conn, "2026-11-08"), [])   # fires only once
+
+    def test_snooze_past_discard_refires_once(self):
+        # Same re-fire guarantee for opened-after alerts, which have no
+        # monthly fallback: snooze ends 2026-10-10, discard date was
+        # 2026-10-06, so it fires once on 2026-10-11 as "opened_today".
+        conn, svc, mid = self.setup_med(opened_at="2026-09-06", discard_after_days=30,
+                                        snooze_opened_until="2026-10-10")
+        self.assertEqual(evaluate(conn, "2026-10-10"), [])
+        kinds = [a.kind for a in evaluate(conn, "2026-10-11")]
+        self.assertEqual(kinds, ["opened_today"])
+        self.assertEqual(evaluate(conn, "2026-10-12"), [])
+
+    def test_threshold_zero_disables_stock_alerts(self):
+        conn, svc, mid = self.setup_med(quantity=0, low_stock_threshold=0)
         self.assertEqual(evaluate(conn, "2026-10-06"), [])
 
     def test_last_dose(self):
