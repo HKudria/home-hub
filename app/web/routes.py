@@ -149,7 +149,12 @@ def build_web_router(services, conn, default_lang: str = "en", data_dir: str = "
             if len(data) <= MAX_IMAGE_BYTES:
                 blobs.append(data)
         if not blobs:
-            return JSONResponse({"error": True})
+            raw = form.getlist("images")
+            return JSONResponse({"error": True, "dbg": {
+                "raw_count": len(raw),
+                "types": sorted({type(u).__name__ for u in raw}),
+                "cts": [getattr(u, "content_type", None) for u in raw],
+            }})
         try:
             ext = await extract_medicine(settings, blobs)
         except Exception:
