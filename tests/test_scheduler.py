@@ -11,7 +11,7 @@ def make_settings():
 @pytest.mark.asyncio
 async def test_daily_check_sends_and_marks(tmp_path):
     conn = init_db(str(tmp_path / "t.db"))
-    MedicineService(conn).add({"name": "A", "expiry_date": "2026-10-06"})
+    MedicineService(conn).add({"name": "A", "expiry_date": "2026-10-06", "quantity": 10})
     bot = AsyncMock()
     n = await run_daily_check(conn, make_settings(), bot, now_date="2026-10-06")
     assert n == 1

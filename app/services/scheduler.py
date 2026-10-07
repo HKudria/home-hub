@@ -1,4 +1,4 @@
-import datetime, os, asyncio
+import datetime, os
 from aiogram import Bot
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from app.services.alerts import evaluate
