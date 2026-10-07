@@ -144,8 +144,10 @@ def build_web_router(services, conn, default_lang: str = "en", data_dir: str = "
         uploads = [u for u in uploads
                    if (u.content_type or "").startswith("image/")][:MAX_IMAGES]
         blobs = []
+        lens = []
         for u in uploads:
             data = await u.read()
+            lens.append(len(data))
             if len(data) <= MAX_IMAGE_BYTES:
                 blobs.append(data)
         if not blobs:
@@ -154,6 +156,8 @@ def build_web_router(services, conn, default_lang: str = "en", data_dir: str = "
                 "raw_count": len(raw),
                 "types": sorted({type(u).__name__ for u in raw}),
                 "cts": [getattr(u, "content_type", None) for u in raw],
+                "lens": lens,
+                "size": len(blobs),
             }})
         try:
             ext = await extract_medicine(settings, blobs)
