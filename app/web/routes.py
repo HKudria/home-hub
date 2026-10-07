@@ -76,7 +76,7 @@ def build_web_router(services, conn, default_lang: str = "en", data_dir: str = "
                          days_until=_days_until(m["expiry_date"]),
                          discard_date=discard_date))
 
-    @router.post("/lang/{code}")
+    @router.api_route("/lang/{code}", methods=["GET", "POST"])
     async def set_lang(code: str):
         if code not in LANGS:
             raise HTTPException(status_code=404, detail="Unknown language")
