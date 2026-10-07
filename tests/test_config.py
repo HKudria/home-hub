@@ -34,6 +34,17 @@ class TestLoadSettings(unittest.TestCase):
         self.assertEqual(s.backup_keep_days, 14)
         self.assertEqual(s.web_password, "")
 
+    def test_blank_int_env(self):
+        env = {k: v for k, v in os.environ.items() if k not in ALL_SETTINGS_KEYS}
+        env["ADMIN_TELEGRAM_ID"] = ""
+        env["DAILY_CHECK_HOUR"] = ""
+        env["BACKUP_KEEP_DAYS"] = ""
+        with patch.dict(os.environ, env, clear=True):
+            s = load_settings()
+        self.assertEqual(s.admin_telegram_id, 0)
+        self.assertEqual(s.daily_check_hour, 9)
+        self.assertEqual(s.backup_keep_days, 14)
+
 
 if __name__ == "__main__":
     unittest.main()

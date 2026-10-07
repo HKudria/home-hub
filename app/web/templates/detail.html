@@ -4,34 +4,34 @@
   <h2>{{ m.name }}</h2>
   <dl>
     {% if m.active_ingredient %}
-    <dt>Active ingredient</dt>
+    <dt>{{ T('detail_ingredient') }}</dt>
     <dd>{{ m.active_ingredient }}</dd>
     {% endif %}
     {% if m.form %}
-    <dt>Form</dt>
+    <dt>{{ T('form_form') }}</dt>
     <dd>{{ m.form }}</dd>
     {% endif %}
     {% if dosage %}
-    <dt>Dosage</dt>
+    <dt>{{ T('form_dosage') }}</dt>
     <dd>{{ dosage }}</dd>
     {% endif %}
     {% if description %}
-    <dt>Description</dt>
+    <dt>{{ T('form_description') }}</dt>
     <dd>{{ description }}</dd>
     {% endif %}
-    <dt>Expiry</dt>
+    <dt>{{ T('form_expiry') }}</dt>
     <dd>
       {% if m.expiry_date %}{{ m.expiry_date }}{% else %}{{ T('no_expiry') }}{% endif %}
     </dd>
     {% if m.opened_at %}
-    <dt>Opened</dt>
+    <dt>{{ T('detail_opened') }}</dt>
     <dd>{{ m.opened_at }}</dd>
     {% endif %}
     {% if discard_date %}
-    <dt>Discard after opening</dt>
+    <dt>{{ T('detail_discard_after') }}</dt>
     <dd>{{ discard_date }} ({{ m.discard_after_days }})</dd>
     {% endif %}
-    <dt>Quantity</dt>
+    <dt>{{ T('form_quantity') }}</dt>
     <dd>{{ m.quantity }} {{ m.unit }}</dd>
   </dl>
 
@@ -51,6 +51,7 @@
       <button type="submit">{{ T('reread_photo') }}</button>
     </form>
     {% endif %}
+    <a class="action-form" href="/medicine/{{ m.id }}/edit"><button type="button">{{ T('edit') }}</button></a>
   </div>
 </article>
 <p><a class="back-link" href="/">&larr; {{ T('list_title') }}</a></p>

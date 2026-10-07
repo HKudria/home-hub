@@ -67,3 +67,40 @@ async def test_take_dose_route(tmp_path):
         r = await c.post(f"/medicine/{mid}/take", data={"amount": "2"}, follow_redirects=True)
     assert r.status_code == 200
     assert conn.execute("SELECT quantity FROM medicines WHERE id=?", (mid,)).fetchone()["quantity"] == 8
+
+@pytest.mark.asyncio
+async def test_edit_medicine(tmp_path):
+    conn = init_db(str(tmp_path / "t.db"))
+    mid = MedicineService(conn).add({"name": "A", "quantity": 2, "expiry_date": "2026-01-01"})
+    app = create_test_app(conn, data_dir=str(tmp_path))
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c:
+        r = await c.post(f"/medicine/{mid}/edit",
+                         data={"name": "A2", "expiry_date": "2027-02-02", "quantity": "9",
+                               "unit": "pieces", "low_stock_threshold": "3"},
+                         follow_redirects=True)
+        assert r.status_code == 200
+    row = conn.execute("SELECT * FROM medicines WHERE id=?", (mid,)).fetchone()
+    assert row["name"] == "A2" and row["quantity"] == 9 and row["expiry_date"] == "2027-02-02"
+
+@pytest.mark.asyncio
+async def test_edit_rejects_partial_expiry(tmp_path):
+    conn = init_db(str(tmp_path / "t.db"))
+    mid = MedicineService(conn).add({"name": "A", "expiry_date": "2026-01-01"})
+    app = create_test_app(conn, data_dir=str(tmp_path))
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c:
+        r = await c.post(f"/medicine/{mid}/edit",
+                         data={"name": "A", "expiry_date": "2027-03"})
+    assert r.status_code == 400
+    assert conn.execute("SELECT expiry_date FROM medicines WHERE id=?",
+                        (mid,)).fetchone()["expiry_date"] == "2026-01-01"
+
+@pytest.mark.asyncio
+async def test_edit_missing_404(tmp_path):
+    conn = init_db(str(tmp_path / "t.db"))
+    app = create_test_app(conn, data_dir=str(tmp_path))
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c:
+        r = await c.post("/medicine/999/edit",
+                         data={"name": "A", "expiry_date": "2027-02-02"})
+        assert r.status_code == 404
+        r = await c.get("/medicine/999/edit")
+        assert r.status_code == 404

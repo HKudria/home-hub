@@ -25,34 +25,34 @@
   <input type="hidden" name="ai_failed" id="ai_failed" value="{{ values.get('ai_failed', '') }}">
 
   <label>
-    <span>Name *</span>
+    <span>{{ T('form_name') }} *</span>
     <input type="text" name="name" required value="{{ values.get('name', '') }}">
   </label>
   <label>
-    <span>Active ingredient</span>
+    <span>{{ T('form_ingredient') }}</span>
     <input type="text" name="active_ingredient" value="{{ values.get('active_ingredient', '') }}">
   </label>
   <label>
-    <span>Form</span>
+    <span>{{ T('form_form') }}</span>
     <input type="text" name="form" value="{{ values.get('form', '') }}">
   </label>
 
   {% for code in LANGS %}
   <label>
-    <span>Dosage ({{ code | upper }})</span>
+    <span>{{ T('form_dosage') }} ({{ code | upper }})</span>
     <textarea name="dosage_{{ code }}" rows="2">{{ values.get('dosage_' ~ code, '') }}</textarea>
   </label>
   {% endfor %}
 
   {% for code in LANGS %}
   <label>
-    <span>Description ({{ code | upper }})</span>
+    <span>{{ T('form_description') }} ({{ code | upper }})</span>
     <textarea name="description_{{ code }}" rows="2">{{ values.get('description_' ~ code, '') }}</textarea>
   </label>
   {% endfor %}
 
   <label>
-    <span>Expiry date *</span>
+    <span>{{ T('form_expiry') }} *</span>
     <input type="date" name="expiry_date" required
            class="{% if error_expiry %}error{% endif %}"
            value="{{ values.get('expiry_date', '') }}">

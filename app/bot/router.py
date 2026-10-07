@@ -167,8 +167,13 @@ def build_router(conn: sqlite3.Connection, settings: Settings,
                 await message.reply(t(lang, "no_match"))
                 return
             if row["quantity"] <= row["low_stock_threshold"]:
-                conn.execute("UPDATE medicines SET low_stock_notified=1 WHERE id=?", (med_id,))
-                conn.commit()
+                # Only mark notified when the admin took the dose themselves;
+                # a family member emptying the box must still alert the admin
+                # via the daily check.
+                if tg_id == settings.admin_telegram_id:
+                    conn.execute("UPDATE medicines SET low_stock_notified=1 WHERE id=?",
+                                 (med_id,))
+                    conn.commit()
             if row["quantity"] == 0:
                 await message.reply(t(lang, "last_dose", name=row["name"]))
             else:
@@ -216,6 +221,11 @@ def build_router(conn: sqlite3.Connection, settings: Settings,
     async def free_text(message: Message, bot: Bot):
         tg_id = message.from_user.id
         if not (is_admin(settings, tg_id) or is_allowed(conn, tg_id)):
+            # Unapproved user: start (or re-show) the approval flow instead
+            # of silently ignoring them. request_approval is idempotent.
+            await request_approval(conn, settings, bot, tg_id,
+                                   actor_name(message.from_user))
+            await message.reply(t(DEFAULT_LANG, "ask_admin"))
             return
         lang = get_user_lang(conn, tg_id)
         text = message.text or ""

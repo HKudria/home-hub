@@ -20,7 +20,7 @@ def alert_text(lang: str, alert: Alert, med: dict) -> str:
 
 def alert_keyboard(alert: Alert):
     kb = InlineKeyboardBuilder()
-    if alert.kind.startswith("expiry"):
+    if alert.kind in ("expiry_soon", "expiry_today", "expired"):
         kb.button(text="🗑", callback_data=f"discard:{alert.medicine_id}")
         kb.button(text="⏰", callback_data=f"snooze_expiry:{alert.medicine_id}")
     elif alert.kind.startswith("opened"):

@@ -2,6 +2,7 @@
 camera capture and AI extraction."""
 import dataclasses
 import datetime
+import re
 import uuid
 from pathlib import Path
 
@@ -153,7 +154,13 @@ def build_web_router(services, conn, default_lang: str = "en", data_dir: str = "
             return JSONResponse({"error": True})
         ext = await extract_medicine(settings, blobs)
         if ext is None:
-            return JSONResponse({"error": True})
+            # AI failed, but keep the photo so the retry job can extract it
+            # later: /add stores it as ai_status='needs_ai_data'.
+            photo_dir = Path(data_dir) / "photos"
+            photo_dir.mkdir(parents=True, exist_ok=True)
+            rel = f"photos/{uuid.uuid4().hex}.jpg"
+            (Path(data_dir) / rel).write_bytes(blobs[0])
+            return JSONResponse({"error": True, "photo_saved": rel})
         if getattr(ext, "multiple", False):
             # Several packages in the shot: ask for a single box / barcode.
             return JSONResponse({"multiple": True})
@@ -206,6 +213,43 @@ def build_web_router(services, conn, default_lang: str = "en", data_dir: str = "
         return RedirectResponse(f"/medicine/{mid}", status_code=303)
 
     # ---- Detail actions -------------------------------------------
+
+    # ---- Edit ------------------------------------------------------
+
+    @router.get("/medicine/{medicine_id}/edit")
+    async def edit_form(request: Request, medicine_id: int):
+        row = _svc().get(medicine_id)
+        if row is None:
+            raise HTTPException(status_code=404, detail="Medicine not found")
+        m = dict(row)
+        return templates.TemplateResponse(
+            request, "edit.html",
+            page_context(request, values=m, units=UNITS, error_expiry=False))
+
+    @router.post("/medicine/{medicine_id}/edit")
+    async def edit_save(request: Request, medicine_id: int):
+        if _svc().get(medicine_id) is None:
+            raise HTTPException(status_code=404, detail="Medicine not found")
+        form = await request.form()
+        expiry = (form.get("expiry_date") or "").strip()
+        name = (form.get("name") or "").strip()
+        if not name or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", expiry):
+            values = {k: form.get(k, "") for k in _FORM_FIELDS if k not in
+                      ("photo_saved", "ai_extracted", "ai_failed")}
+            return templates.TemplateResponse(
+                request, "edit.html",
+                page_context(request, values=values, units=UNITS,
+                             error_expiry=True),
+                status_code=400)
+        _svc().update(medicine_id, {
+            "name": name,
+            "expiry_date": expiry,
+            "quantity": _to_float(form.get("quantity"), 0.0),
+            "unit": (form.get("unit") or "pieces").strip(),
+            "low_stock_threshold": _to_int(form.get("low_stock_threshold"), 3) or 0,
+            "discard_after_days": _to_int(form.get("discard_after_days")),
+        })
+        return RedirectResponse(f"/medicine/{medicine_id}", status_code=303)
 
     @router.post("/medicine/{medicine_id}/take")
     async def take_dose(medicine_id: int, request: Request):

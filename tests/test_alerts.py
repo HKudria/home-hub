@@ -60,15 +60,21 @@ class AlertTest(unittest.TestCase):
         conn.commit()
         self.assertEqual(evaluate(conn, "2026-10-06"), [])
 
-    def test_snooze_past_expiry_refires_once(self):
+    def test_snooze_past_expiry_refires_monthly(self):
         # Snooze extends past the expiry date: suppressed while snoozed,
-        # re-fires once as "expired" on the first day after the snooze ends.
+        # re-fires as "expired" on the first day after the snooze ends and
+        # then monthly from there (snooze_end+1, +31, +61, ...).
         conn, svc, mid = self.setup_med(expiry_date="2026-10-06",
                                         snooze_expiry_until="2026-11-06")
         self.assertEqual(evaluate(conn, "2026-11-05"), [])   # still snoozed
-        kinds = [a.kind for a in evaluate(conn, "2026-11-07")]  # day after snooze end
+        self.assertEqual([a.kind for a in evaluate(conn, "2026-11-07")], ["expired"])  # day 0
+        self.assertEqual(evaluate(conn, "2026-11-08"), [])    # off-cycle
+        kinds = [a.kind for a in evaluate(conn, "2026-12-07")]  # +30 days
         self.assertEqual(kinds, ["expired"])
-        self.assertEqual(evaluate(conn, "2026-11-08"), [])   # fires only once
+
+    def test_malformed_expiry_skipped(self):
+        conn, svc, mid = self.setup_med(expiry_date="2027-03")
+        self.assertEqual(evaluate(conn, "2026-10-06"), [])
 
     def test_snooze_past_discard_refires_once(self):
         # Same re-fire guarantee for opened-after alerts, which have no

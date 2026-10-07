@@ -23,9 +23,9 @@ def load_settings() -> Settings:
         zai_vision_model=os.environ.get("ZAI_VISION_MODEL", "glm-4.5v"),
         zai_text_model=os.environ.get("ZAI_TEXT_MODEL", "glm-4.6"),
         telegram_bot_token=os.environ.get("TELEGRAM_BOT_TOKEN", ""),
-        admin_telegram_id=int(os.environ.get("ADMIN_TELEGRAM_ID", "0")),
-        daily_check_hour=int(os.environ.get("DAILY_CHECK_HOUR", "9")),
+        admin_telegram_id=int(os.environ.get("ADMIN_TELEGRAM_ID", "").strip() or "0"),
+        daily_check_hour=int(os.environ.get("DAILY_CHECK_HOUR", "").strip() or "9"),
         web_password=os.environ.get("WEB_PASSWORD", ""),
         data_dir=os.environ.get("DATA_DIR", "./data"),
-        backup_keep_days=int(os.environ.get("BACKUP_KEEP_DAYS", "14")),
+        backup_keep_days=int(os.environ.get("BACKUP_KEEP_DAYS", "").strip() or "14"),
     )

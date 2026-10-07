@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>{{ T('edit') }}</h2>
+
+<form method="post" action="/medicine/{{ values['id'] }}/edit" class="card add-form">
+  <label>
+    <span>{{ T('form_name') }} *</span>
+    <input type="text" name="name" required value="{{ values.get('name', '') }}">
+  </label>
+
+  <label>
+    <span>{{ T('form_expiry') }} *</span>
+    <input type="date" name="expiry_date" required
+           class="{% if error_expiry %}error{% endif %}"
+           value="{{ values.get('expiry_date', '') }}">
+  </label>
+  {% if error_expiry %}
+  <p class="error-msg">{{ T('expiry_required') }}</p>
+  {% endif %}
+
+  <label>
+    <span>{{ T('form_quantity') }}</span>
+    <input type="number" name="quantity" step="any" min="0" value="{{ values.get('quantity', '') }}">
+  </label>
+  <label>
+    <span>{{ T('form_unit') }}</span>
+    <select name="unit">
+      {% for u in units %}
+      <option value="{{ u }}" {% if values.get('unit', 'pieces') == u %}selected{% endif %}>{{ u }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>
+    <span>{{ T('form_threshold') }}</span>
+    <input type="number" name="low_stock_threshold" step="1" min="0" value="{{ values.get('low_stock_threshold', '3') }}">
+  </label>
+  <label>
+    <span>{{ T('form_discard_after') }} ({{ T('optional') }})</span>
+    <input type="number" name="discard_after_days" step="1" min="0" value="{{ values.get('discard_after_days', '') }}">
+  </label>
+
+  <button type="submit">{{ T('save') }}</button>
+</form>
+
+<p><a class="back-link" href="/medicine/{{ values['id'] }}">&larr; {{ values['name'] }}</a></p>
+{% endblock %}

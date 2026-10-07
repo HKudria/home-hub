@@ -129,6 +129,9 @@
         if (data.multiple) {
           showMsg(MSGS.multiple || "Please photograph one box at a time.", true);
         } else if (data.error) {
+          if (data.photo_saved) {
+            document.getElementById("photo_saved").value = data.photo_saved;
+          }
           document.getElementById("ai_failed").value = "1";
           showMsg(MSGS.aiError || "Could not read the photo.", true);
         } else {

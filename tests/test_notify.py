@@ -16,6 +16,11 @@ def test_keyboard_expiry():
     datas = [btn.callback_data for row in kb.inline_keyboard for btn in row]
     assert "discard:3" in datas and "snooze_expiry:3" in datas
 
+def test_keyboard_expired():
+    kb = alert_keyboard(Alert("expired", 3, "X", -30))
+    datas = [btn.callback_data for row in kb.inline_keyboard for btn in row]
+    assert "discard:3" in datas and "snooze_expiry:3" in datas
+
 def test_keyboard_low_stock():
     kb = alert_keyboard(Alert("low_stock", 3, "X", 2))
     datas = [btn.callback_data for row in kb.inline_keyboard for btn in row]

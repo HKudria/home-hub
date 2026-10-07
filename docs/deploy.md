@@ -43,7 +43,10 @@ Fill in the values:
   admin is automatically allowed to use the bot and approves other users.
 - **`ZAI_API_KEY`** — your z.ai API key, used to extract medicine data from
   photos and interpret text messages.
-- **`WEB_PASSWORD`** — password for the web UI login page.
+- **`WEB_PASSWORD`** — password for the web UI login page. Optional but
+  **recommended**: without it the web UI is open to anyone on your LAN —
+  only skip it if you are comfortable with every device in your home network
+  being able to read and change the medicine cabinet.
 - **`DATA_DIR=/data`** — **important:** the `.env.example` default
   (`./data`) works for running without Docker, but inside the container it
   must be `/data`, which is the path mounted from the host's `./data`
@@ -65,17 +68,17 @@ docker compose ps
 docker compose logs -f    # Ctrl+C to stop following
 ```
 
-On startup the app creates `data/hub.db`, runs migrations, and — if
-`TELEGRAM_BOT_TOKEN` is set — starts bot polling and the scheduler (daily
-check, hourly AI retry, nightly 03:00 backup). Without a token it starts in
-web-only mode.
+On startup the app creates `data/hub.db` (and its tables, if the file is
+new) and — if `TELEGRAM_BOT_TOKEN` is set — starts bot polling and the
+scheduler (daily check, hourly AI retry, nightly 03:00 backup). Without a
+token it starts in web-only mode.
 
 ## 4. Open the web UI over VPN and add it to the home screen
 
 Open `http://<lxc-ip>:8000` from your phone (e.g. `http://192.168.1.50:8000`).
 Home Hub has no public HTTPS — it is meant to be reached from inside your home
-network, typically over your VPN when away from home. Log in with
-`WEB_PASSWORD`.
+network, typically over your VPN when away from home. If you set
+`WEB_PASSWORD`, log in with it.
 
 To get an app-like icon: in the phone's browser menu choose **Add to Home
 Screen**. The page is responsive and sets a proper name/icon for the shortcut.
@@ -126,3 +129,10 @@ docker compose up -d --build
 
 This rebuilds the image with the new code and restarts the container. All data
 in `./data` (database, photos, backups) is untouched by rebuilds.
+
+Each rebuild leaves the previous image behind, which slowly eats disk space
+on the small LXC. Reclaim it occasionally with:
+
+```bash
+docker image prune -f
+```
