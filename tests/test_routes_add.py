@@ -1,0 +1,66 @@
+import io, json, pytest
+from unittest.mock import AsyncMock, patch
+from httpx import ASGITransport, AsyncClient
+from app.db import init_db
+from app.services.medicine_service import MedicineService
+from app.web.app_factory import create_test_app
+
+def png():
+    return io.BytesIO(b"\x89PNG\r\n\x1a\n" + b"0" * 64)
+
+@pytest.mark.asyncio
+async def test_add_manual(tmp_path):
+    conn = init_db(str(tmp_path / "t.db"))
+    app = create_test_app(conn, data_dir=str(tmp_path))
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c:
+        r = await c.post("/add", data={"name": "A", "quantity": "5", "expiry_date": "2027-01-01"},
+                         follow_redirects=True)
+        assert r.status_code == 200
+    rows = conn.execute("SELECT * FROM medicines").fetchall()
+    assert rows[0]["name"] == "A" and rows[0]["ai_status"] == "ok"
+
+@pytest.mark.asyncio
+async def test_add_requires_expiry(tmp_path):
+    conn = init_db(str(tmp_path / "t.db"))
+    app = create_test_app(conn, data_dir=str(tmp_path))
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c:
+        r = await c.post("/add", data={"name": "A", "quantity": "5", "expiry_date": ""})
+    assert r.status_code == 400
+    assert conn.execute("SELECT COUNT(*) c FROM medicines").fetchone()["c"] == 0
+
+@pytest.mark.asyncio
+async def test_extract_multiple_packages(tmp_path):
+    conn = init_db(str(tmp_path / "t.db"))
+    app = create_test_app(conn, data_dir=str(tmp_path))
+    fake = AsyncMock(return_value=AsyncMock(name="", multiple=True, expiry_date=None,
+                          active_ingredient="", form="",
+                          dosage_pl="", dosage_ru="", dosage_uk="", dosage_en="",
+                          description_pl="", description_ru="", description_uk="", description_en=""))
+    with patch("app.web.routes.extract_medicine", fake):
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c:
+            r = await c.post("/extract", files=[("images", ("a.jpg", png(), "image/jpeg"))])
+    assert json.loads(r.text) == {"multiple": True}
+
+@pytest.mark.asyncio
+async def test_extract_with_mocked_ai(tmp_path):
+    conn = init_db(str(tmp_path / "t.db"))
+    app = create_test_app(conn, data_dir=str(tmp_path))
+    fake = AsyncMock(return_value=AsyncMock(name="X", expiry_date="2027-01-01", multiple=False,
+                          active_ingredient="", form="",
+                          dosage_pl="", dosage_ru="", dosage_uk="", dosage_en="",
+                          description_pl="", description_ru="", description_uk="", description_en=""))
+    with patch("app.web.routes.extract_medicine", fake):
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c:
+            r = await c.post("/extract", files=[("images", ("a.jpg", png(), "image/jpeg"))])
+    assert r.status_code == 200
+    assert json.loads(r.text)["name"] == "X"
+
+@pytest.mark.asyncio
+async def test_take_dose_route(tmp_path):
+    conn = init_db(str(tmp_path / "t.db"))
+    mid = MedicineService(conn).add({"name": "A", "quantity": 10})
+    app = create_test_app(conn, data_dir=str(tmp_path))
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c:
+        r = await c.post(f"/medicine/{mid}/take", data={"amount": "2"}, follow_redirects=True)
+    assert r.status_code == 200
+    assert conn.execute("SELECT quantity FROM medicines WHERE id=?", (mid,)).fetchone()["quantity"] == 8

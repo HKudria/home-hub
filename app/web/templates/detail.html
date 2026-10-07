@@ -34,6 +34,24 @@
     <dt>Quantity</dt>
     <dd>{{ m.quantity }} {{ m.unit }}</dd>
   </dl>
+
+  <div class="actions">
+    <form method="post" action="/medicine/{{ m.id }}/take" class="action-form">
+      <input type="number" name="amount" value="1" min="0" step="any" class="amount-input">
+      <button type="submit">{{ T('take_dose') }}</button>
+    </form>
+    <form method="post" action="/medicine/{{ m.id }}/open" class="action-form">
+      <button type="submit">{{ T('mark_opened') }}</button>
+    </form>
+    <form method="post" action="/medicine/{{ m.id }}/discard" class="action-form">
+      <button type="submit">{{ T('discard') }}</button>
+    </form>
+    {% if m.photo_path %}
+    <form method="post" action="/medicine/{{ m.id }}/reread" class="action-form">
+      <button type="submit">{{ T('reread_photo') }}</button>
+    </form>
+    {% endif %}
+  </div>
 </article>
 <p><a class="back-link" href="/">&larr; {{ T('list_title') }}</a></p>
 {% endblock %}

@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>{{ T('add_medicine') }}</h2>
+
+<section class="card camera-area" id="camera-area">
+  <p class="camera-msg hidden" id="camera-msg"></p>
+  <div class="camera-preview-wrap hidden" id="camera-preview-wrap">
+    <video id="camera-preview" autoplay playsinline></video>
+    <button type="button" id="camera-capture">{{ T('camera') }} &#x1f4f7;</button>
+    <button type="button" id="camera-cancel">&times;</button>
+  </div>
+  <div class="camera-slots">
+    {% for slot in (0, 1) %}
+    <div class="camera-slot">
+      <button type="button" class="camera-btn" data-slot="{{ slot }}">&#x1f4f7; {{ T('camera') }} {{ slot + 1 }}</button>
+      <input type="file" accept="image/*" capture="environment" class="file-fallback hidden" data-slot="{{ slot }}">
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<form method="post" action="/add" id="add-form" class="card add-form">
+  <input type="hidden" name="photo_saved" id="photo_saved" value="{{ values.get('photo_saved', '') }}">
+  <input type="hidden" name="ai_extracted" id="ai_extracted" value="{{ values.get('ai_extracted', '') }}">
+  <input type="hidden" name="ai_failed" id="ai_failed" value="{{ values.get('ai_failed', '') }}">
+
+  <label>
+    <span>Name *</span>
+    <input type="text" name="name" required value="{{ values.get('name', '') }}">
+  </label>
+  <label>
+    <span>Active ingredient</span>
+    <input type="text" name="active_ingredient" value="{{ values.get('active_ingredient', '') }}">
+  </label>
+  <label>
+    <span>Form</span>
+    <input type="text" name="form" value="{{ values.get('form', '') }}">
+  </label>
+
+  {% for code in LANGS %}
+  <label>
+    <span>Dosage ({{ code | upper }})</span>
+    <textarea name="dosage_{{ code }}" rows="2">{{ values.get('dosage_' ~ code, '') }}</textarea>
+  </label>
+  {% endfor %}
+
+  {% for code in LANGS %}
+  <label>
+    <span>Description ({{ code | upper }})</span>
+    <textarea name="description_{{ code }}" rows="2">{{ values.get('description_' ~ code, '') }}</textarea>
+  </label>
+  {% endfor %}
+
+  <label>
+    <span>Expiry date *</span>
+    <input type="date" name="expiry_date" required
+           class="{% if error_expiry %}error{% endif %}"
+           value="{{ values.get('expiry_date', '') }}">
+  </label>
+  {% if error_expiry %}
+  <p class="error-msg">{{ T('expiry_required') }}</p>
+  {% endif %}
+
+  <label>
+    <span>{{ T('quantity') }}</span>
+    <input type="number" name="quantity" step="any" min="0" value="{{ values.get('quantity', '') }}">
+  </label>
+  <label>
+    <span>{{ T('unit') }}</span>
+    <select name="unit">
+      {% for u in units %}
+      <option value="{{ u }}" {% if values.get('unit', 'pieces') == u %}selected{% endif %}>{{ u }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>
+    <span>{{ T('low_stock_threshold') }}</span>
+    <input type="number" name="low_stock_threshold" step="1" min="0" value="{{ values.get('low_stock_threshold', '3') }}">
+  </label>
+  <label>
+    <span>{{ T('discard_after_days') }} ({{ T('optional') }})</span>
+    <input type="number" name="discard_after_days" step="1" min="0" value="{{ values.get('discard_after_days', '') }}">
+  </label>
+
+  <button type="submit">{{ T('save') }}</button>
+</form>
+
+<script>window.CAMERA_MSGS = {
+  multiple: {{ T('multiple_warning') | tojson }},
+  aiError: {{ T('ai_error') | tojson }},
+  aiOk: {{ T('ai_ok') | tojson }}
+};</script>
+<script src="/static/camera.js"></script>
+{% endblock %}
