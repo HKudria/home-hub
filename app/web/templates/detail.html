@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block content %}
+<article class="card detail">
+  <h2>{{ m.name }}</h2>
+  <dl>
+    {% if m.active_ingredient %}
+    <dt>Active ingredient</dt>
+    <dd>{{ m.active_ingredient }}</dd>
+    {% endif %}
+    {% if m.form %}
+    <dt>Form</dt>
+    <dd>{{ m.form }}</dd>
+    {% endif %}
+    {% if dosage %}
+    <dt>Dosage</dt>
+    <dd>{{ dosage }}</dd>
+    {% endif %}
+    {% if description %}
+    <dt>Description</dt>
+    <dd>{{ description }}</dd>
+    {% endif %}
+    <dt>Expiry</dt>
+    <dd>
+      {% if m.expiry_date %}{{ m.expiry_date }}{% else %}{{ T('no_expiry') }}{% endif %}
+    </dd>
+    {% if m.opened_at %}
+    <dt>Opened</dt>
+    <dd>{{ m.opened_at }}</dd>
+    {% endif %}
+    {% if discard_date %}
+    <dt>Discard after opening</dt>
+    <dd>{{ discard_date }} ({{ m.discard_after_days }})</dd>
+    {% endif %}
+    <dt>Quantity</dt>
+    <dd>{{ m.quantity }} {{ m.unit }}</dd>
+  </dl>
+</article>
+<p><a class="back-link" href="/">&larr; {{ T('list_title') }}</a></p>
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block content %}
+<form method="get" action="/" class="search-form">
+  <input type="search" name="q" value="{{ q }}" placeholder="{{ T('search_placeholder') }}">
+</form>
+
+{% if not expiring and not others %}
+<p class="empty">{{ T('no_match') }}</p>
+{% endif %}
+
+{% if expiring %}
+<h2>{{ T('expiring_soon_list') }}</h2>
+<div class="cards">
+  {% for m in expiring %}
+  <article class="card expiring">
+    <a class="card-title" href="/medicine/{{ m.id }}">{{ m.name }}</a>
+    <p class="card-line">{{ m.quantity }} {{ m.unit }}</p>
+    <p class="card-line expiry">
+      {% if m.expiry_date %}{{ m.expiry_date }} ({{ m.days_until }}){% else %}{{ T('no_expiry') }}{% endif %}
+    </p>
+  </article>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if others %}
+{% if expiring %}<h2>{{ T('list_title') }}</h2>{% endif %}
+<div class="cards">
+  {% for m in others %}
+  <article class="card">
+    <a class="card-title" href="/medicine/{{ m.id }}">{{ m.name }}</a>
+    <p class="card-line">{{ m.quantity }} {{ m.unit }}</p>
+    <p class="card-line expiry">
+      {% if m.expiry_date %}{{ m.expiry_date }}{% else %}{{ T('no_expiry') }}{% endif %}
+    </p>
+  </article>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

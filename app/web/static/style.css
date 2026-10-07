@@ -1,0 +1,67 @@
+/* Home Hub web UI — minimal mobile-first styles */
+* { box-sizing: border-box; }
+
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  margin: 0 auto;
+  padding: 0.75rem;
+  max-width: 480px;
+  color: #1a1a1a;
+  background: #f6f6f4;
+}
+
+a { color: #2a6f4e; text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+.site-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+.site-header h1 { font-size: 1.4rem; margin: 0; flex: 1; }
+.add-link { font-size: 0.9rem; }
+
+.langs { width: 100%; display: flex; gap: 0.5rem; }
+.lang-link {
+  font-size: 0.8rem;
+  padding: 0.15rem 0.45rem;
+  border: 1px solid #ccc;
+  border-radius: 999px;
+}
+.lang-link.active { background: #2a6f4e; color: #fff; border-color: #2a6f4e; }
+
+.search-form { margin-bottom: 1rem; }
+.search-form input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 0.5rem;
+}
+
+h2 { font-size: 1rem; color: #555; margin: 1rem 0 0.5rem; }
+
+.cards { display: flex; flex-direction: column; gap: 0.6rem; }
+
+.card {
+  background: #fff;
+  border: 1px solid #e0e0dc;
+  border-radius: 0.6rem;
+  padding: 0.75rem 0.9rem;
+}
+.card.expiring { border-color: #d9822b; background: #fff8ef; }
+
+.card-title { font-weight: 600; font-size: 1.05rem; }
+.card-line { margin: 0.25rem 0 0; font-size: 0.9rem; color: #444; }
+.card-line.expiry { color: #777; }
+.card.expiring .card-line.expiry { color: #b35c00; }
+
+.empty { color: #666; }
+
+.detail dl { margin: 0; }
+.detail dt { font-size: 0.75rem; text-transform: uppercase; color: #888; margin-top: 0.7rem; }
+.detail dd { margin: 0.15rem 0 0; font-size: 1rem; }
+
+.back-link { font-size: 0.9rem; display: inline-block; margin-top: 1rem; }
