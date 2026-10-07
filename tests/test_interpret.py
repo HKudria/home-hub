@@ -13,6 +13,10 @@ def test_symptom():
 def test_garbage():
     assert parse_intent("hello") is None
 
+def test_parse_intent_bad_amount_returns_none():
+    assert parse_intent('{"action":"take","medicine_query":"x","amount":"many"}') is None
+    assert parse_intent('{"action":"take","medicine_query":"x","amount":[]}') is None
+
 @pytest.mark.asyncio
 async def test_interpret_fallback(monkeypatch):
     class FakeResp:

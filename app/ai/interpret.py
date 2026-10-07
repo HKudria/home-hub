@@ -28,8 +28,15 @@ def parse_intent(text: str) -> Intent | None:
         return None
     if d.get("action") not in VALID:
         return None
+    raw = d.get("amount", 1)
+    if isinstance(raw, (list, dict)):
+        return None
+    try:
+        amount = float(raw or 1)
+    except (ValueError, TypeError):
+        return None
     return Intent(action=d["action"], medicine_query=str(d.get("medicine_query", "")).lower(),
-                  amount=float(d.get("amount", 1) or 1), symptom=str(d.get("symptom", "")))
+                  amount=amount, symptom=str(d.get("symptom", "")))
 
 async def interpret(settings, text: str) -> Intent:
     payload = {"model": settings.zai_text_model,
@@ -41,6 +48,6 @@ async def interpret(settings, text: str) -> Intent:
                              json=payload, headers={"Authorization": f"Bearer {settings.zai_api_key}"})
             r.raise_for_status()
             content = r.json()["choices"][0]["message"]["content"]
-    except (httpx.HTTPError, KeyError, IndexError, ValueError):
+        return parse_intent(content) or Intent("unknown")
+    except (httpx.HTTPError, KeyError, IndexError, ValueError, TypeError):
         return Intent("unknown")
-    return parse_intent(content) or Intent("unknown")
