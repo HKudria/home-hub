@@ -6,9 +6,10 @@ import re
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException, Request, UploadFile
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from starlette.datastructures import UploadFile
 
 from app.ai.client import extract_medicine
 from app.i18n import LANGS, t
@@ -144,21 +145,12 @@ def build_web_router(services, conn, default_lang: str = "en", data_dir: str = "
         uploads = [u for u in uploads
                    if (u.content_type or "").startswith("image/")][:MAX_IMAGES]
         blobs = []
-        lens = []
         for u in uploads:
             data = await u.read()
-            lens.append(len(data))
             if len(data) <= MAX_IMAGE_BYTES:
                 blobs.append(data)
         if not blobs:
-            raw = form.getlist("images")
-            return JSONResponse({"error": True, "dbg": {
-                "raw_count": len(raw),
-                "types": sorted({type(u).__name__ for u in raw}),
-                "cts": [getattr(u, "content_type", None) for u in raw],
-                "lens": lens,
-                "size": len(blobs),
-            }})
+            return JSONResponse({"error": True})
         try:
             ext = await extract_medicine(settings, blobs)
         except Exception:
