@@ -3,6 +3,7 @@ from app.services.alerts import Alert
 from app.i18n import t
 
 def alert_text(lang: str, alert: Alert, med: dict) -> str:
+    med = dict(med)
     if alert.kind == "expiry_soon":
         return t(lang, "expires_in_days", name=alert.name, days=alert.days)
     if alert.kind == "expiry_today":
@@ -30,5 +31,5 @@ def alert_keyboard(alert: Alert):
     return kb.as_markup()
 
 def callback_to_action(data: str) -> tuple[str, int]:
-    action, mid = data.split(":", 1)
-    return action, int(mid)
+    action, rest = data.split(":", 1)
+    return action, int(rest.rstrip(":"))

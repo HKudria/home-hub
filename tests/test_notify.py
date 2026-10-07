@@ -23,3 +23,14 @@ def test_keyboard_low_stock():
 
 def test_callback_parse():
     assert callback_to_action("snooze_opened:7") == ("snooze_opened", 7)
+
+def test_callback_addlist_trailing_colon():
+    assert callback_to_action("addlist:3:") == ("addlist", 3)
+
+def test_alert_text_accepts_row_like():
+    # dict is fine; the defensive dict(med) is for sqlite3.Row — simulate an object without .get
+    class RowLike:
+        def __getitem__(self, k):
+            return {"opened_at": "2026-09-06"}[k]
+    s = alert_text("en", Alert("opened_soon", 1, "X", 1), RowLike())
+    assert "X" in s
