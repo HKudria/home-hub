@@ -70,6 +70,13 @@ def create_app(settings) -> FastAPI:
             bot = Bot(settings.telegram_bot_token)
             dp = Dispatcher()
             dp.include_router(build_router(conn, settings, services))
+            # Telegram client-side command menu ("/" button).
+            from aiogram.types import BotCommand
+            await bot.set_my_commands([
+                BotCommand(command="start", description="Start / register"),
+                BotCommand(command="help", description="What can I ask?"),
+                BotCommand(command="lang", description="Switch language (pl/ru/uk/en)"),
+            ])
             polling_task = asyncio.create_task(dp.start_polling(bot))
             app.state.bot = bot
             app.state.polling_task = polling_task

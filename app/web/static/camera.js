@@ -15,6 +15,7 @@
   var shots = [null, null]; // Blob per slot, slot 0 is the primary photo.
 
   var msgEl = document.getElementById("camera-msg");
+  var loadingEl = document.getElementById("camera-loading");
   var previewWrap = document.getElementById("camera-preview-wrap");
   var video = document.getElementById("camera-preview");
   var captureBtn = document.getElementById("camera-capture");
@@ -34,6 +35,15 @@
 
   function hideMsg() {
     if (msgEl) msgEl.classList.add("hidden");
+  }
+
+  /* Busy state while /extract is in flight: show the spinner + text and
+   * lock the capture/extract controls so no second upload can start. */
+  function setBusy(busy) {
+    [captureBtn].concat(cameraBtns, fileInputs).forEach(function (el) {
+      if (el) el.disabled = busy;
+    });
+    if (loadingEl) loadingEl.classList.toggle("hidden", !busy);
   }
 
   function stopStream() {
@@ -123,9 +133,11 @@
     blobs.forEach(function (b, i) {
       fd.append("images", b, "photo" + i + ".jpg");
     });
-    fetch("/extract", { method: "POST", body: fd })
-      .then(function (r) { return r.json(); })
-      .then(function (data) {
+    setBusy(true);
+    (async function () {
+      try {
+        var r = await fetch("/extract", { method: "POST", body: fd });
+        var data = await r.json();
         if (data.multiple) {
           showMsg(MSGS.multiple || "Please photograph one box at a time.", true);
         } else if (data.error) {
@@ -148,10 +160,12 @@
           if (data.expiry_date) setField("expiry_date", data.expiry_date);
           showMsg(MSGS.aiOk || "Photo read.", false);
         }
-      })
-      .catch(function () {
+      } catch (e) {
         document.getElementById("ai_failed").value = "1";
         showMsg(MSGS.aiError || "Could not read the photo.", true);
-      });
+      } finally {
+        setBusy(false);
+      }
+    })();
   }
 })();

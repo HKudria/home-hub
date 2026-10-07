@@ -48,6 +48,7 @@ MESSAGES: dict[str, dict[str, str]] = {
         "multiple_warning": "The photo shows several packages — please photograph one box at a time, or the barcode.",
         "ai_error": "Could not read the photo — please fill in the fields manually.",
         "ai_ok": "Photo read — please check the fields below.",
+        "reading_photo": "AI is reading the photo…",
         "quantity": "Quantity",
         "unit": "Unit",
         "low_stock_threshold": "Low stock alert",
@@ -65,6 +66,15 @@ MESSAGES: dict[str, dict[str, str]] = {
         "detail_ingredient": "Active ingredient",
         "detail_opened": "Opened",
         "detail_discard_after": "Discard after opening",
+        "help_text": (
+            "Just write to me in plain words, for example:\n"
+            "• took 1 paracetamol\n"
+            "• opened aspirin\n"
+            "• how much ibuprofen is left?\n"
+            "• I have a headache — anything?\n"
+            "• expiry soon?\n\n"
+            "/lang pl — change language"
+        ),
     },
     "pl": {
         "app_name": "Apteczka",
@@ -105,6 +115,7 @@ MESSAGES: dict[str, dict[str, str]] = {
         "multiple_warning": "Na zdjęciu jest kilka opakowań — sfotografuj jedno opakowanie naraz albo kod kreskowy.",
         "ai_error": "Nie udało się odczytać zdjęcia — wypełnij pola ręcznie.",
         "ai_ok": "Zdjęcie odczytane — sprawdź pola poniżej.",
+        "reading_photo": "AI czyta zdjęcie…",
         "quantity": "Ilość",
         "unit": "Jednostka",
         "low_stock_threshold": "Alarm niskiego stanu",
@@ -122,6 +133,15 @@ MESSAGES: dict[str, dict[str, str]] = {
         "detail_ingredient": "Substancja czynna",
         "detail_opened": "Otwarto",
         "detail_discard_after": "Wyrzuć po otwarciu",
+        "help_text": (
+            "Pisz do mnie zwykłymi słowami, na przykład:\n"
+            "• wziąłem 1 paracetamol\n"
+            "• otworzyłem aspirynę\n"
+            "• ile zostało ibuprofenu?\n"
+            "• boli mnie głowa — coś masz?\n"
+            "• co wkrótce traci ważność?\n\n"
+            "/lang pl — zmiana języka"
+        ),
     },
     "ru": {
         "app_name": "Аптечка",
@@ -162,6 +182,7 @@ MESSAGES: dict[str, dict[str, str]] = {
         "multiple_warning": "На фото несколько упаковок — сфотографируйте одну упаковку или штрихкод.",
         "ai_error": "Не удалось распознать фото — заполните поля вручную.",
         "ai_ok": "Фото распознано — проверьте поля ниже.",
+        "reading_photo": "ИИ читает фото…",
         "quantity": "Количество",
         "unit": "Единица",
         "low_stock_threshold": "Порог малого запаса",
@@ -179,6 +200,15 @@ MESSAGES: dict[str, dict[str, str]] = {
         "detail_ingredient": "Действующее вещество",
         "detail_opened": "Открыто",
         "detail_discard_after": "Выбросить после вскрытия",
+        "help_text": (
+            "Просто напишите мне обычными словами, например:\n"
+            "• принял 1 парацетамол\n"
+            "• открыл аспирин\n"
+            "• сколько осталось ибупрофена?\n"
+            "• у меня болит голова — что есть?\n"
+            "• что скоро истекает?\n\n"
+            "/lang ru — сменить язык"
+        ),
     },
     "uk": {
         "app_name": "Аптечка",
@@ -219,6 +249,7 @@ MESSAGES: dict[str, dict[str, str]] = {
         "multiple_warning": "На фото кілька упаковок — сфотографуйте одну упаковку або штрихкод.",
         "ai_error": "Не вдалося розпізнати фото — заповніть поля вручну.",
         "ai_ok": "Фото розпізнано — перевірте поля нижче.",
+        "reading_photo": "ШІ читає фото…",
         "quantity": "Кількість",
         "unit": "Одиниця",
         "low_stock_threshold": "Поріг малого запасу",
@@ -236,6 +267,15 @@ MESSAGES: dict[str, dict[str, str]] = {
         "detail_ingredient": "Діюча речовина",
         "detail_opened": "Відкрито",
         "detail_discard_after": "Викинути після відкриття",
+        "help_text": (
+            "Пишіть мені звичайними словами, наприклад:\n"
+            "• прийняв 1 парацетамол\n"
+            "• відкрив аспірин\n"
+            "• скільки залишилось ібупрофену?\n"
+            "• у мене болить голова — щось є?\n"
+            "• що скоро спливає?\n\n"
+            "/lang uk — змінити мову"
+        ),
     },
 }
 

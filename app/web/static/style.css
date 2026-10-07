@@ -106,6 +106,14 @@ h2 { font-size: 1rem; color: #555; margin: 1rem 0 0.5rem; }
 .file-fallback { margin-top: 0.4rem; font-size: 0.8rem; }
 .camera-msg { font-size: 0.85rem; margin: 0 0 0.5rem; color: #2a6f4e; }
 .camera-msg-error { color: #c0392b; }
+.camera-loading { font-size: 0.85rem; margin: 0 0 0.5rem; color: #2a6f4e; display: flex; align-items: center; gap: 0.45rem; }
+.camera-loading .spinner {
+  width: 0.9rem; height: 0.9rem; flex: 0 0 auto;
+  border: 2px solid #bcd9c8; border-top-color: #2a6f4e; border-radius: 50%;
+  animation: camera-spin 0.8s linear infinite;
+}
+@keyframes camera-spin { to { transform: rotate(360deg); } }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
 .camera-preview-wrap { margin-bottom: 0.6rem; }
 .camera-preview-wrap video { width: 100%; border-radius: 0.5rem; background: #000; }
 .camera-preview-wrap button {

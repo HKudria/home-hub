@@ -4,6 +4,9 @@
 
 <section class="card camera-area" id="camera-area">
   <p class="camera-msg hidden" id="camera-msg"></p>
+  <p class="camera-loading hidden" id="camera-loading">
+    <span class="spinner" aria-hidden="true"></span> {{ T('reading_photo') }}
+  </p>
   <div class="camera-preview-wrap hidden" id="camera-preview-wrap">
     <video id="camera-preview" autoplay playsinline></video>
     <button type="button" id="camera-capture">{{ T('camera') }} &#x1f4f7;</button>

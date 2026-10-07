@@ -207,6 +207,18 @@ def build_router(conn: sqlite3.Connection, settings: Settings,
             await request_approval(conn, settings, bot, tg_id, actor_name(message.from_user))
             await message.reply(t(lang, "ask_admin"))
 
+    @router.message(Command("help"))
+    async def cmd_help(message: Message, bot: Bot):
+        tg_id = message.from_user.id
+        if not (is_admin(settings, tg_id) or is_allowed(conn, tg_id)):
+            # Same gate as free text: unapproved users get the approval flow.
+            await request_approval(conn, settings, bot, tg_id,
+                                   actor_name(message.from_user))
+            await message.reply(t(DEFAULT_LANG, "ask_admin"))
+            return
+        lang = get_user_lang(conn, tg_id)
+        await message.reply(t(lang, "help_text"))
+
     @router.message(Command("lang"))
     async def cmd_lang(message: Message):
         parts = (message.text or "").split()
