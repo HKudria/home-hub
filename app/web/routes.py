@@ -139,8 +139,6 @@ def build_web_router(services, conn, default_lang: str = "en", data_dir: str = "
 
     @router.post("/extract")
     async def extract(request: Request):
-        if settings is None:
-            return JSONResponse({"error": True})
         form = await request.form()
         uploads = [u for u in form.getlist("images") if isinstance(u, UploadFile)]
         uploads = [u for u in uploads
@@ -152,7 +150,12 @@ def build_web_router(services, conn, default_lang: str = "en", data_dir: str = "
                 blobs.append(data)
         if not blobs:
             return JSONResponse({"error": True})
-        ext = await extract_medicine(settings, blobs)
+        try:
+            ext = await extract_medicine(settings, blobs)
+        except Exception:
+            # No settings configured (or extraction crashed) — treat as AI
+            # failure; the photo is still saved below for the retry job.
+            ext = None
         if ext is None:
             # AI failed, but keep the photo so the retry job can extract it
             # later: /add stores it as ai_status='needs_ai_data'.
