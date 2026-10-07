@@ -5,6 +5,7 @@ import datetime
 import re
 import uuid
 from pathlib import Path
+from urllib.parse import urlparse
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse, RedirectResponse
@@ -123,10 +124,16 @@ def build_web_router(services, conn, default_lang: str = "en", data_dir: str = "
                          discard_date=discard_date))
 
     @router.api_route("/lang/{code}", methods=["GET", "POST"])
-    async def set_lang(code: str):
+    async def set_lang(code: str, request: Request):
         if code not in LANGS:
             raise HTTPException(status_code=404, detail="Unknown language")
-        response = RedirectResponse("/", status_code=303)
+        # Return to the page the user came from (path + query), else home.
+        referer = request.headers.get("referer")
+        parsed = urlparse(referer or "")
+        target = parsed.path or "/"
+        if parsed.query:
+            target += "?" + parsed.query
+        response = RedirectResponse(target, status_code=303)
         response.set_cookie("lang", code)
         return response
 
