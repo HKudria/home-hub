@@ -41,17 +41,25 @@
   </label>
 
   {% for code in LANGS %}
+  {% if code == lang %}
   <label>
-    <span>{{ T('form_dosage') }} ({{ code | upper }})</span>
-    <textarea name="dosage_{{ code }}" rows="2">{{ values.get('dosage_' ~ code, '') }}</textarea>
+    <span>{{ T('form_dosage') }}</span>
+    <textarea name="dosage_{{ code }}" id="dosage_{{ code }}" rows="2">{{ values.get('dosage_' ~ code, '') }}</textarea>
   </label>
+  {% else %}
+  <input type="hidden" name="dosage_{{ code }}" id="dosage_{{ code }}" value="{{ values.get('dosage_' ~ code, '') }}">
+  {% endif %}
   {% endfor %}
 
   {% for code in LANGS %}
+  {% if code == lang %}
   <label>
-    <span>{{ T('form_description') }} ({{ code | upper }})</span>
-    <textarea name="description_{{ code }}" rows="2">{{ values.get('description_' ~ code, '') }}</textarea>
+    <span>{{ T('form_description') }}</span>
+    <textarea name="description_{{ code }}" id="description_{{ code }}" rows="2">{{ values.get('description_' ~ code, '') }}</textarea>
   </label>
+  {% else %}
+  <input type="hidden" name="description_{{ code }}" id="description_{{ code }}" value="{{ values.get('description_' ~ code, '') }}">
+  {% endif %}
   {% endfor %}
 
   <label>
