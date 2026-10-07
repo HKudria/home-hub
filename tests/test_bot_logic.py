@@ -1,6 +1,6 @@
 from app.db import init_db
 from app.services.medicine_service import MedicineService
-from app.bot.router import match_medicines, symptom_matches, describe_matches
+from app.bot.router import match_medicines, symptom_matches, describe_matches, parse_pick_data
 
 def make(tmp_path):
     conn = init_db(str(tmp_path / "t.db"))
@@ -28,3 +28,8 @@ def test_describe(tmp_path):
     rows = match_medicines(conn, "paracetamol")
     s = describe_matches(rows, "en")
     assert "Paracetamol 500" in s and "10 pieces" in s
+
+def test_parse_pick_data():
+    assert parse_pick_data("pick:12:1") == (12, 1.0)
+    assert parse_pick_data("pick:7:2.5") == (7, 2.5)
+    assert parse_pick_data("pick:9") == (9, 1.0)

@@ -19,7 +19,7 @@ from app.ai.interpret import Intent, interpret
 from app.bot.notify import callback_to_action
 from app.bot.users import approve, decline, is_admin, is_allowed, request_approval
 from app.config import Settings
-from app.i18n import DEFAULT_LANG, detect_lang, t
+from app.i18n import DEFAULT_LANG, t
 from app.services.medicine_service import MedicineService
 
 LANG_CODES = ("en", "pl", "ru", "uk")
@@ -95,6 +95,12 @@ def describe_matches_enhanced(rows, lang: str) -> str:
     return "\n".join(lines)
 
 
+def parse_pick_data(data: str):
+    """Return (medicine_id, amount) from 'pick:<id>:<amount>'."""
+    parts = data.split(":")
+    return int(parts[1]), float(parts[2]) if len(parts) > 2 and parts[2] else 1.0
+
+
 def get_user_lang(conn: sqlite3.Connection, tg_id: int) -> str:
     row = conn.execute("SELECT lang FROM allowed_users WHERE telegram_id=?", (tg_id,)).fetchone()
     if row and row["lang"] in LANG_CODES:
@@ -148,9 +154,9 @@ def build_router(conn: sqlite3.Connection, settings: Settings,
     router = Router(name="bot")
     svc: MedicineService = services["medicines"]
 
-    async def do_action(message: Message, action: str, med_id: int, amount: float):
-        lang = get_user_lang(conn, message.from_user.id)
-        actor = actor_name(message.from_user)
+    async def do_action(message: Message, tg_id: int, actor: str, action: str,
+                        med_id: int, amount: float):
+        lang = get_user_lang(conn, tg_id)
         row = svc.get(med_id)
         if row is None:
             await message.reply(t(lang, "no_match"))
@@ -163,7 +169,7 @@ def build_router(conn: sqlite3.Connection, settings: Settings,
             if row["quantity"] <= row["low_stock_threshold"]:
                 conn.execute("UPDATE medicines SET low_stock_notified=1 WHERE id=?", (med_id,))
                 conn.commit()
-            if int(row["quantity"]) == 0:
+            if row["quantity"] == 0:
                 await message.reply(t(lang, "last_dose", name=row["name"]))
             else:
                 await message.reply(t(lang, "took", name=row["name"],
@@ -225,7 +231,8 @@ def build_router(conn: sqlite3.Connection, settings: Settings,
                 PENDING[(message.chat.id, tg_id)] = intent.action
                 await reply_pick_buttons(message, rows, amount)
             else:
-                await do_action(message, intent.action, rows[0]["id"], amount)
+                await do_action(message, tg_id, actor_name(message.from_user),
+                                intent.action, rows[0]["id"], amount)
 
         elif intent.action == "expiring":
             today = datetime.date.today()
@@ -273,6 +280,21 @@ def build_router(conn: sqlite3.Connection, settings: Settings,
     async def on_callback(query: CallbackQuery, bot: Bot):
         try:
             data = query.data or ""
+
+            if data.startswith("pick:"):
+                # Parse before callback_to_action, which would crash on the
+                # colon-separated format ("pick:12:1" is not an int).
+                med_id, amount = parse_pick_data(data)
+                tg_id = query.from_user.id
+                actor = actor_name(query.from_user)
+                chat_id = query.message.chat.id if query.message else 0
+                pending = PENDING.pop((chat_id, tg_id), None) or "take"
+                if query.message:
+                    await do_action(query.message, tg_id, actor,
+                                    pending, med_id, amount)
+                await query.answer()
+                return
+
             action, val = callback_to_action(data)
             tg_id = query.from_user.id
             lang = get_user_lang(conn, tg_id)
@@ -326,15 +348,6 @@ def build_router(conn: sqlite3.Connection, settings: Settings,
                 conn.commit()
                 if query.message:
                     await query.message.reply(t(lang, "added_to_list"))
-            elif action == "pick":
-                parts = data.split(":")
-                try:
-                    amount = float(parts[2]) if len(parts) > 2 and parts[2] else 1.0
-                except ValueError:
-                    amount = 1.0
-                pending = PENDING.pop((chat_id, tg_id), None) or "take"
-                if query.message:
-                    await do_action(query.message, pending, val, amount)
         except Exception:
             pass  # any error: just ack below
         finally:
