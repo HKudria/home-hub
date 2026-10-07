@@ -41,7 +41,8 @@ def test_parse_multiple_packages():
 @pytest.mark.asyncio
 async def test_extract_medicine_http(monkeypatch):
     async def fake_post(self, url, **kw):
-        content = {"choices": [{"message": {"content": json.dumps(RAW)}}]}
+        assert url.endswith("/v1/messages"), url
+        content = {"content": [{"type": "text", "text": json.dumps(RAW)}]}
         return httpx.Response(200, json=content, request=httpx.Request("POST", url))
     monkeypatch.setattr(httpx.AsyncClient, "post", fake_post)
     s = Settings("k", "http://x", "m", "m2", "t", 1, 9, "", ".", 14)

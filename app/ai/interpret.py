@@ -40,14 +40,19 @@ def parse_intent(text: str) -> Intent | None:
 
 async def interpret(settings, text: str) -> Intent:
     payload = {"model": settings.zai_text_model,
-               "messages": [{"role": "system", "content": PROMPT},
-                            {"role": "user", "content": text}]}
+               "max_tokens": 1024,
+               "system": PROMPT,
+               "messages": [{"role": "user", "content": text}]}
     try:
         async with httpx.AsyncClient(timeout=30) as c:
-            r = await c.post(f"{settings.zai_base_url}/chat/completions",
-                             json=payload, headers={"Authorization": f"Bearer {settings.zai_api_key}"})
+            r = await c.post(f"{settings.zai_base_url.rstrip('/')}/v1/messages",
+                             json=payload,
+                             headers={"x-api-key": settings.zai_api_key,
+                                      "anthropic-version": "2023-06-01"})
             r.raise_for_status()
-            content = r.json()["choices"][0]["message"]["content"]
+            data = r.json()
+            content = "".join(block.get("text", "") for block in data.get("content", [])
+                              if isinstance(block, dict))
         return parse_intent(content) or Intent("unknown")
     except (httpx.HTTPError, KeyError, IndexError, ValueError, TypeError):
         return Intent("unknown")

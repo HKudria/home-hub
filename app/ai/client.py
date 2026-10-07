@@ -56,19 +56,28 @@ def parse_extraction(text: str) -> MedicineExtract | None:
         expiry_date=exp)
 
 async def extract_medicine(settings, images: list[bytes]) -> MedicineExtract | None:
-    content = [{"type": "text", "text": PROMPT}]
+    """Extract medicine data from package photos via z.ai's Anthropic-compatible
+    API (POST {base_url}/v1/messages with x-api-key auth)."""
+    content = []
     for img in images:
         b64 = base64.b64encode(img).decode()
-        content.append({"type": "image_url",
-                        "image_url": {"url": f"data:image/jpeg;base64,{b64}"}})
+        content.append({"type": "image",
+                        "source": {"type": "base64", "media_type": "image/jpeg", "data": b64}})
+    content.append({"type": "text", "text": PROMPT})
     payload = {"model": settings.zai_vision_model,
+               "max_tokens": 2048,
+               "system": PROMPT,
                "messages": [{"role": "user", "content": content}]}
     try:
         async with httpx.AsyncClient(timeout=60) as c:
-            r = await c.post(f"{settings.zai_base_url}/chat/completions",
-                             json=payload, headers={"Authorization": f"Bearer {settings.zai_api_key}"})
+            r = await c.post(f"{settings.zai_base_url.rstrip('/')}/v1/messages",
+                             json=payload,
+                             headers={"x-api-key": settings.zai_api_key,
+                                      "anthropic-version": "2023-06-01"})
             r.raise_for_status()
-            text = r.json()["choices"][0]["message"]["content"]
-    except (httpx.HTTPError, KeyError, IndexError, ValueError):
+            data = r.json()
+            text = "".join(block.get("text", "") for block in data.get("content", [])
+                           if isinstance(block, dict))
+    except (httpx.HTTPError, KeyError, IndexError, ValueError, TypeError):
         return None
     return parse_extraction(text)

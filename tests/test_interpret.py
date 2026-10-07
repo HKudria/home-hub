@@ -21,7 +21,7 @@ def test_parse_intent_bad_amount_returns_none():
 async def test_interpret_fallback(monkeypatch):
     class FakeResp:
         def raise_for_status(self): pass
-        def json(self): return {"choices": [{"message": {"content": "???"}}]}
+        def json(self): return {"content": [{"type": "text", "text": "???"}]}
     async def fake_post(self, url, **kw):
         return FakeResp()
     monkeypatch.setattr(httpx.AsyncClient, "post", fake_post)

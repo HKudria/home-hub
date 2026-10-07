@@ -19,9 +19,9 @@ class Settings:
 def load_settings() -> Settings:
     return Settings(
         zai_api_key=os.environ.get("ZAI_API_KEY", ""),
-        zai_base_url=os.environ.get("ZAI_BASE_URL", "https://api.z.ai/api/paas/v4"),
+        zai_base_url=os.environ.get("ZAI_BASE_URL", "https://api.z.ai/api/anthropic"),
         zai_vision_model=os.environ.get("ZAI_VISION_MODEL", "glm-4.5v"),
-        zai_text_model=os.environ.get("ZAI_TEXT_MODEL", "glm-4.6"),
+        zai_text_model=os.environ.get("ZAI_TEXT_MODEL", "glm-5.1"),
         telegram_bot_token=os.environ.get("TELEGRAM_BOT_TOKEN", ""),
         admin_telegram_id=int(os.environ.get("ADMIN_TELEGRAM_ID", "").strip() or "0"),
         daily_check_hour=int(os.environ.get("DAILY_CHECK_HOUR", "").strip() or "9"),
