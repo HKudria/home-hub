@@ -138,6 +138,8 @@ def build_web_router(services, conn, default_lang: str = "en", data_dir: str = "
 
     @router.post("/extract")
     async def extract(request: Request):
+        if settings is None:
+            return JSONResponse({"error": True})
         form = await request.form()
         uploads = [u for u in form.getlist("images") if isinstance(u, UploadFile)]
         uploads = [u for u in uploads
@@ -241,7 +243,7 @@ def build_web_router(services, conn, default_lang: str = "en", data_dir: str = "
             return RedirectResponse(url, status_code=303)
         ext = await extract_medicine(settings, [path.read_bytes()])
         if ext and not ext.multiple and ext.name:
-            _svc().update(medicine_id, {
+            updates = {
                 "name": ext.name,
                 "active_ingredient": ext.active_ingredient,
                 "form": ext.form,
@@ -251,9 +253,11 @@ def build_web_router(services, conn, default_lang: str = "en", data_dir: str = "
                 "description_ru": ext.description_ru,
                 "description_uk": ext.description_uk,
                 "description_en": ext.description_en,
-                "expiry_date": ext.expiry_date,
                 "ai_status": "ok",
-            })
+            }
+            if ext.expiry_date:
+                updates["expiry_date"] = ext.expiry_date
+            _svc().update(medicine_id, updates)
         return RedirectResponse(url, status_code=303)
 
     return router

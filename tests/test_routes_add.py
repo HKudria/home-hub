@@ -45,11 +45,14 @@ async def test_extract_multiple_packages(tmp_path):
 async def test_extract_with_mocked_ai(tmp_path):
     conn = init_db(str(tmp_path / "t.db"))
     app = create_test_app(conn, data_dir=str(tmp_path))
-    fake = AsyncMock(return_value=AsyncMock(name="X", expiry_date="2027-01-01", multiple=False,
-                          active_ingredient="", form="",
-                          dosage_pl="", dosage_ru="", dosage_uk="", dosage_en="",
-                          description_pl="", description_ru="", description_uk="", description_en=""))
-    with patch("app.web.routes.extract_medicine", fake):
+    fake_extract = AsyncMock(return_value=None)
+    ext = AsyncMock(multiple=False, expiry_date="2027-01-01",
+                    active_ingredient="", form="",
+                    dosage_pl="", dosage_ru="", dosage_uk="", dosage_en="",
+                    description_pl="", description_ru="", description_uk="", description_en="")
+    ext.name = "X"
+    fake_extract.return_value = ext
+    with patch("app.web.routes.extract_medicine", fake_extract):
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c:
             r = await c.post("/extract", files=[("images", ("a.jpg", png(), "image/jpeg"))])
     assert r.status_code == 200
