@@ -1,18 +1,17 @@
 /* Camera capture for the add-medicine flow.
  *
- * Two photo slots. Tapping a camera button opens the device camera
+ * A single photo slot. Tapping the camera button opens the device camera
  * (environment-facing); the frame is drawn to a canvas and captured as
  * JPEG (quality 0.8). If the camera is unavailable or permission is
- * denied, a plain file input appears as fallback. Shots are POSTed to
+ * denied, a plain file input appears as fallback. The shot is POSTed to
  * /extract; the JSON response fills the form fields (or shows a
  * "several packages" / generic error message).
  */
 (function () {
   "use strict";
 
-  var MAX_SLOTS = 2;
   var MSGS = window.CAMERA_MSGS || {};
-  var shots = [null, null]; // Blob per slot, slot 0 is the primary photo.
+  var shot = null; // The captured Blob (or chosen File).
 
   var msgEl = document.getElementById("camera-msg");
   var loadingEl = document.getElementById("camera-loading");
@@ -24,7 +23,6 @@
   var fileInputs = Array.prototype.slice.call(document.querySelectorAll(".file-fallback"));
 
   var stream = null;
-  var activeSlot = null;
 
   function showMsg(text, isError) {
     if (!msgEl) return;
@@ -54,10 +52,9 @@
     if (previewWrap) previewWrap.classList.add("hidden");
   }
 
-  function startCamera(slot) {
-    activeSlot = slot;
+  function startCamera() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      fallback(slot);
+      fallback();
       return;
     }
     navigator.mediaDevices
@@ -69,14 +66,14 @@
         hideMsg();
       })
       .catch(function () {
-        fallback(slot);
+        fallback();
       });
   }
 
-  /* Camera denied/unavailable: reveal the file input for this slot. */
-  function fallback(slot) {
+  /* Camera denied/unavailable: reveal the file input. */
+  function fallback() {
     stopStream();
-    var input = fileInputs[slot];
+    var input = fileInputs[0];
     if (input) {
       input.classList.remove("hidden");
       input.click();
@@ -86,7 +83,7 @@
   }
 
   captureBtn.addEventListener("click", function () {
-    if (!stream || activeSlot === null) return;
+    if (!stream) return;
     var canvas = document.createElement("canvas");
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
@@ -94,7 +91,7 @@
     canvas.getContext("2d").drawImage(video, 0, 0);
     canvas.toBlob(function (blob) {
       if (blob) {
-        shots[activeSlot] = blob;
+        shot = blob;
         upload();
       }
       stopStream();
@@ -104,17 +101,14 @@
   cancelBtn.addEventListener("click", stopStream);
 
   cameraBtns.forEach(function (btn) {
-    btn.addEventListener("click", function () {
-      startCamera(parseInt(btn.dataset.slot, 10) || 0);
-    });
+    btn.addEventListener("click", startCamera);
   });
 
   fileInputs.forEach(function (input) {
     input.addEventListener("change", function () {
-      var slot = parseInt(input.dataset.slot, 10) || 0;
       var file = input.files && input.files[0];
       if (file) {
-        shots[slot] = file;
+        shot = file;
         upload();
       }
     });
@@ -127,12 +121,9 @@
   }
 
   function upload() {
-    var blobs = shots.filter(Boolean);
-    if (!blobs.length) return;
+    if (!shot) return;
     var fd = new FormData();
-    blobs.forEach(function (b, i) {
-      fd.append("images", b, "photo" + i + ".jpg");
-    });
+    fd.append("images", shot, "photo0.jpg");
     setBusy(true);
     (async function () {
       try {

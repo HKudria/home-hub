@@ -1,19 +1,41 @@
 {% extends "base.html" %}
 {% block content %}
+<h2 class="page-subtitle">{{ T('list_title') }}</h2>
+
 <form method="get" action="/" class="search-form">
   <input type="search" name="q" value="{{ q }}" placeholder="{{ T('search_placeholder') }}">
 </form>
 
 {% if not expiring and not others %}
+{% if q %}
 <p class="empty">{{ T('no_match') }}</p>
+{% else %}
+<div class="empty-state">
+  <p class="empty-emoji" aria-hidden="true">&#129524;</p>
+  <p class="empty-text">{{ T('empty_cabinet') }}</p>
+  <a class="btn-primary" href="/add">+ {{ T('add_medicine') }}</a>
+</div>
 {% endif %}
+{% endif %}
+
+{% macro badge(m) -%}
+{% if m.days_until is none -%}
+<span class="badge badge-neutral" aria-hidden="true"></span>
+{%- elif m.days_until < 0 -%}
+<span class="badge badge-bad" aria-hidden="true"></span>
+{%- elif m.days_until <= 7 -%}
+<span class="badge badge-warn" aria-hidden="true"></span>
+{%- else -%}
+<span class="badge badge-ok" aria-hidden="true"></span>
+{%- endif %}
+{%- endmacro %}
 
 {% if expiring %}
 <h2>{{ T('expiring_soon_list') }}</h2>
 <div class="cards">
   {% for m in expiring %}
   <article class="card expiring">
-    <a class="card-title" href="/medicine/{{ m.id }}">{{ m.name }}</a>
+    <a class="card-title" href="/medicine/{{ m.id }}">{{ badge(m) }}{{ m.name }}</a>
     <p class="card-line">{{ m.quantity }} {{ m.unit }}</p>
     <p class="card-line expiry">
       {% if m.expiry_date %}{{ m.expiry_date }} ({{ m.days_until }}){% else %}{{ T('no_expiry') }}{% endif %}
@@ -24,11 +46,11 @@
 {% endif %}
 
 {% if others %}
-{% if expiring %}<h2>{{ T('list_title') }}</h2>{% endif %}
+{% if not expiring %}<h2 class="visually-hidden">{{ T('list_title') }}</h2>{% endif %}
 <div class="cards">
   {% for m in others %}
   <article class="card">
-    <a class="card-title" href="/medicine/{{ m.id }}">{{ m.name }}</a>
+    <a class="card-title" href="/medicine/{{ m.id }}">{{ badge(m) }}{{ m.name }}</a>
     <p class="card-line">{{ m.quantity }} {{ m.unit }}</p>
     <p class="card-line expiry">
       {% if m.expiry_date %}{{ m.expiry_date }}{% else %}{{ T('no_expiry') }}{% endif %}

@@ -33,6 +33,7 @@ MESSAGES: dict[str, dict[str, str]] = {
         "snoozed": "Snoozed ⏰",
         "added_to_list": "Added to the shopping list 🛒",
         "list_title": "Medicine cabinet",
+        "empty_cabinet": "Your cabinet is empty. Add your first medicine!",
         "no_expiry": "No expiry date set",
         "take_dose": "Took a dose",
         "mark_opened": "Mark opened",
@@ -49,8 +50,7 @@ MESSAGES: dict[str, dict[str, str]] = {
         "ai_error": "Could not read the photo — please fill in the fields manually.",
         "ai_ok": "Photo read — please check the fields below.",
         "reading_photo": "AI is reading the photo…",
-        "camera_front": "Photo 1: front of the package (name, dosage)",
-        "camera_expiry": "Photo 2: side or bottom with the expiry date",
+        "camera_front": "Take a photo of the package",
         "camera_hint": "The AI reads the photo automatically — you can fix everything before saving.",
         "quantity": "Quantity",
         "unit": "Unit",
@@ -69,6 +69,8 @@ MESSAGES: dict[str, dict[str, str]] = {
         "detail_ingredient": "Active ingredient",
         "detail_opened": "Opened",
         "detail_discard_after": "Discard after opening",
+        "section_info": "Info",
+        "section_storage": "Storage & dates",
         "help_text": (
             "Just write to me in plain words, for example:\n"
             "• took 1 paracetamol\n"
@@ -103,6 +105,7 @@ MESSAGES: dict[str, dict[str, str]] = {
         "snoozed": "Odłożono ⏰",
         "added_to_list": "Dodano do listy zakupów 🛒",
         "list_title": "Domowa apteczka",
+        "empty_cabinet": "Twoja apteczka jest pusta. Dodaj pierwszy lek!",
         "no_expiry": "Brak daty ważności",
         "take_dose": "Przyjęto dawkę",
         "mark_opened": "Oznacz jako otwarte",
@@ -119,8 +122,7 @@ MESSAGES: dict[str, dict[str, str]] = {
         "ai_error": "Nie udało się odczytać zdjęcia — wypełnij pola ręcznie.",
         "ai_ok": "Zdjęcie odczytane — sprawdź pola poniżej.",
         "reading_photo": "AI czyta zdjęcie…",
-        "camera_front": "Zdjęcie 1: przód opakowania (nazwa, dawkowanie)",
-        "camera_expiry": "Zdjęcie 2: strona lub spód z datą ważności",
+        "camera_front": "Zrób zdjęcie opakowania",
         "camera_hint": "AI odczyta zdjęcie automatycznie — przed zapisaniem możesz wszystko poprawić.",
         "quantity": "Ilość",
         "unit": "Jednostka",
@@ -139,6 +141,8 @@ MESSAGES: dict[str, dict[str, str]] = {
         "detail_ingredient": "Substancja czynna",
         "detail_opened": "Otwarto",
         "detail_discard_after": "Wyrzuć po otwarciu",
+        "section_info": "Informacje",
+        "section_storage": "Przechowywanie i daty",
         "help_text": (
             "Pisz do mnie zwykłymi słowami, na przykład:\n"
             "• wziąłem 1 paracetamol\n"
@@ -173,6 +177,7 @@ MESSAGES: dict[str, dict[str, str]] = {
         "snoozed": "Отложено ⏰",
         "added_to_list": "Добавлено в список покупок 🛒",
         "list_title": "Домашняя аптечка",
+        "empty_cabinet": "Ваша аптечка пуста. Добавьте первое лекарство!",
         "no_expiry": "Срок годности не указан",
         "take_dose": "Доза принята",
         "mark_opened": "Отметить открытым",
@@ -189,8 +194,7 @@ MESSAGES: dict[str, dict[str, str]] = {
         "ai_error": "Не удалось распознать фото — заполните поля вручную.",
         "ai_ok": "Фото распознано — проверьте поля ниже.",
         "reading_photo": "ИИ читает фото…",
-        "camera_front": "Фото 1: передняя сторона упаковки (название, дозировка)",
-        "camera_expiry": "Фото 2: сторона или низ с датой истечения срока",
+        "camera_front": "Сфотографируйте упаковку",
         "camera_hint": "ИИ распознает фото автоматически — перед сохранением всё можно исправить.",
         "quantity": "Количество",
         "unit": "Единица",
@@ -209,6 +213,8 @@ MESSAGES: dict[str, dict[str, str]] = {
         "detail_ingredient": "Действующее вещество",
         "detail_opened": "Открыто",
         "detail_discard_after": "Выбросить после вскрытия",
+        "section_info": "Информация",
+        "section_storage": "Хранение и даты",
         "help_text": (
             "Просто напишите мне обычными словами, например:\n"
             "• принял 1 парацетамол\n"
@@ -243,6 +249,7 @@ MESSAGES: dict[str, dict[str, str]] = {
         "snoozed": "Відкладено ⏰",
         "added_to_list": "Додано до списку покупок 🛒",
         "list_title": "Домашня аптечка",
+        "empty_cabinet": "Ваша аптечка порожня. Додайте перші ліки!",
         "no_expiry": "Термін придатності не вказано",
         "take_dose": "Дозу прийнято",
         "mark_opened": "Позначити відкритим",
@@ -259,8 +266,7 @@ MESSAGES: dict[str, dict[str, str]] = {
         "ai_error": "Не вдалося розпізнати фото — заповніть поля вручну.",
         "ai_ok": "Фото розпізнано — перевірте поля нижче.",
         "reading_photo": "ШІ читає фото…",
-        "camera_front": "Фото 1: лицьова сторона упаковки (назва, дозування)",
-        "camera_expiry": "Фото 2: сторона або низ з датою придатності",
+        "camera_front": "Сфотографуйте упаковку",
         "camera_hint": "ШІ розпізнає фото автоматично — перед збереженням все можна виправити.",
         "quantity": "Кількість",
         "unit": "Одиниця",
@@ -279,6 +285,8 @@ MESSAGES: dict[str, dict[str, str]] = {
         "detail_ingredient": "Діюча речовина",
         "detail_opened": "Відкрито",
         "detail_discard_after": "Викинути після відкриття",
+        "section_info": "Інформація",
+        "section_storage": "Зберігання та дати",
         "help_text": (
             "Пишіть мені звичайними словами, наприклад:\n"
             "• прийняв 1 парацетамол\n"

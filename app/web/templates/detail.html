@@ -2,6 +2,7 @@
 {% block content %}
 <article class="card detail">
   <h2>{{ m.name }}</h2>
+  <h3 class="section-heading">{{ T('section_info') }}</h3>
   <dl>
     {% if m.active_ingredient %}
     <dt>{{ T('detail_ingredient') }}</dt>
@@ -19,6 +20,10 @@
     <dt>{{ T('form_description') }}</dt>
     <dd>{{ description }}</dd>
     {% endif %}
+  </dl>
+
+  <h3 class="section-heading">{{ T('section_storage') }}</h3>
+  <dl>
     <dt>{{ T('form_expiry') }}</dt>
     <dd>
       {% if m.expiry_date %}{{ m.expiry_date }}{% else %}{{ T('no_expiry') }}{% endif %}

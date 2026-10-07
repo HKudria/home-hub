@@ -1,5 +1,12 @@
-/* Home Hub web UI — minimal mobile-first styles */
+/* Home Hub web UI — mobile-first styles */
 * { box-sizing: border-box; }
+
+:root {
+  --accent: #2a6f4e;
+  --accent-dark: #215940;
+  --warn: #d9822b;
+  --bad: #c0392b;
+}
 
 body {
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -48,17 +55,62 @@ h2 { font-size: 1rem; color: #555; margin: 1rem 0 0.5rem; }
 .card {
   background: #fff;
   border: 1px solid #e0e0dc;
-  border-radius: 0.6rem;
+  border-radius: 0.75rem;
   padding: 0.75rem 0.9rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 .card.expiring { border-color: #d9822b; background: #fff8ef; }
 
-.card-title { font-weight: 600; font-size: 1.05rem; }
+.card-title { font-weight: 600; font-size: 1.05rem; display: inline-flex; align-items: center; gap: 0.45rem; }
 .card-line { margin: 0.25rem 0 0; font-size: 0.9rem; color: #444; }
 .card-line.expiry { color: #777; }
 .card.expiring .card-line.expiry { color: #b35c00; }
 
+/* Status badge dot (colour only; expiry line carries the details) */
+.badge {
+  width: 0.6rem; height: 0.6rem; flex: 0 0 auto;
+  border-radius: 50%;
+  display: inline-block;
+}
+.badge-ok { background: #2e9e5b; }
+.badge-warn { background: var(--warn); }
+.badge-bad { background: var(--bad); }
+.badge-neutral { background: #bbb; }
+
 .empty { color: #666; }
+
+/* Friendly empty cabinet */
+.empty-state {
+  text-align: center;
+  padding: 2.5rem 1rem;
+  margin-top: 1rem;
+}
+.empty-emoji { font-size: 2.5rem; margin: 0 0 0.5rem; }
+.empty-text { color: #555; font-size: 1rem; margin: 0 0 1.25rem; }
+
+.page-subtitle {
+  font-size: 1.1rem;
+  color: #444;
+  font-weight: 600;
+  margin: 0 0 0.75rem;
+}
+
+.section-heading {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  margin: 1.1rem 0 0.3rem;
+}
+.detail dl + .section-heading { margin-top: 1.2rem; }
+
+.visually-hidden {
+  position: absolute;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
 
 .detail dl { margin: 0; }
 .detail dt { font-size: 0.75rem; text-transform: uppercase; color: #888; margin-top: 0.7rem; }
@@ -82,13 +134,30 @@ h2 { font-size: 1rem; color: #555; margin: 1rem 0 0.5rem; }
 .add-form button[type="submit"] {
   margin-top: 1rem;
   width: 100%;
+  min-height: 44px;
   padding: 0.6rem;
   font-size: 1rem;
+  font-weight: 600;
   color: #fff;
-  background: #2a6f4e;
+  background: var(--accent);
   border: none;
-  border-radius: 0.5rem;
+  border-radius: 0.6rem;
 }
+.add-form button[type="submit"]:active { background: var(--accent-dark); }
+
+/* Primary call-to-action button (e.g. empty-state "Add your first medicine") */
+.btn-primary {
+  display: inline-block;
+  min-height: 44px;
+  line-height: 44px;
+  padding: 0 1.4rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent);
+  border-radius: 0.6rem;
+}
+.btn-primary:hover { text-decoration: none; background: var(--accent-dark); }
 
 /* Camera area */
 .camera-area { margin-bottom: 1rem; }
@@ -96,10 +165,11 @@ h2 { font-size: 1rem; color: #555; margin: 1rem 0 0.5rem; }
 .camera-slot { flex: 1; }
 .camera-btn {
   width: 100%;
+  min-height: 44px;
   padding: 0.55rem;
   font-size: 0.95rem;
   border: 1px dashed #2a6f4e;
-  border-radius: 0.5rem;
+  border-radius: 0.6rem;
   background: #f0f7f3;
   color: #2a6f4e;
 }
@@ -118,10 +188,11 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .camera-preview-wrap video { width: 100%; border-radius: 0.5rem; background: #000; }
 .camera-preview-wrap button {
   margin: 0.4rem 0.4rem 0 0;
+  min-height: 44px;
   padding: 0.45rem 0.9rem;
   font-size: 0.95rem;
   border: none;
-  border-radius: 0.5rem;
+  border-radius: 0.6rem;
   background: #2a6f4e;
   color: #fff;
 }
@@ -133,11 +204,12 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; }
 .action-form { display: flex; gap: 0.35rem; }
 .action-form button {
+  min-height: 44px;
   padding: 0.45rem 0.8rem;
   font-size: 0.9rem;
   border: 1px solid #2a6f4e;
-  border-radius: 0.5rem;
+  border-radius: 0.6rem;
   background: #fff;
   color: #2a6f4e;
 }
-.action-form .amount-input { width: 4.5rem; padding: 0.4rem; font-size: 0.95rem; border: 1px solid #ccc; border-radius: 0.5rem; }
+.action-form .amount-input { width: 4.5rem; min-height: 44px; padding: 0.4rem; font-size: 0.95rem; border: 1px solid #ccc; border-radius: 0.6rem; }
