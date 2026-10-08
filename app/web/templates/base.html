@@ -7,19 +7,40 @@
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-  <header class="site-header">
-    <h1><a href="/">{{ T('app_name') }}</a></h1>
-    <a class="add-link" href="/add">+ {{ T('add_medicine') }}</a>
-    <a class="add-link" href="/shopping">&#128722; {{ T('nav_shopping') }}</a>
-    <a class="add-link" href="/tasks">&#9745; {{ T('nav_tasks') }}</a>
-    <nav class="langs" aria-label="{{ T('language') }}">
+{% set nav_path = request.url.path if request is defined else '' %}
+<header class="site-nav">
+  <a class="brand" href="/">{{ T('app_name') }}</a>
+
+  <nav class="nav-links" aria-label="{{ T('app_name') }}">
+    <a class="nav-link{% if nav_path == '/' %} active{% endif %}" href="/">
+      <span class="nav-icon" aria-hidden="true">&#127968;</span><span class="nav-label">{{ T('list_title') }}</span>
+    </a>
+    <a class="nav-link{% if nav_path.startswith('/shopping') %} active{% endif %}" href="/shopping">
+      <span class="nav-icon" aria-hidden="true">&#128722;</span><span class="nav-label">{{ T('nav_shopping') }}</span>
+    </a>
+    <a class="nav-link{% if nav_path.startswith('/tasks') %} active{% endif %}" href="/tasks">
+      <span class="nav-icon" aria-hidden="true">&#9745;</span><span class="nav-label">{{ T('nav_tasks') }}</span>
+    </a>
+  </nav>
+
+  <details class="lang-menu">
+    <summary aria-label="{{ T('language') }}">&#127760;<span class="visually-hidden">{{ T('language') }}</span></summary>
+    <div class="lang-list">
       {% for code in LANGS %}
       <a href="/lang/{{ code }}" class="lang-link{% if code == lang %} active{% endif %}">{{ code | upper }}</a>
       {% endfor %}
-    </nav>
-  </header>
-  <main>
-    {% block content %}{% endblock %}
-  </main>
+    </div>
+  </details>
+
+  <div class="sidebar-langs" aria-label="{{ T('language') }}">
+    {% for code in LANGS %}
+    <a href="/lang/{{ code }}" class="lang-link{% if code == lang %} active{% endif %}">{{ code | upper }}</a>
+    {% endfor %}
+  </div>
+</header>
+
+<main class="content">
+  {% block content %}{% endblock %}
+</main>
 </body>
 </html>

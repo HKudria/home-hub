@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<h2 class="page-subtitle">{{ T('list_title') }}</h2>
+<h2 class="page-title">{{ T('list_title') }}</h2>
 
 <form method="get" action="/" class="search-form">
   <input type="search" name="q" value="{{ q }}" placeholder="{{ T('search_placeholder') }}">
@@ -13,7 +13,7 @@
 <div class="empty-state">
   <p class="empty-emoji" aria-hidden="true">&#129524;</p>
   <p class="empty-text">{{ T('empty_cabinet') }}</p>
-  <a class="btn-primary" href="/add">+ {{ T('add_medicine') }}</a>
+  <a class="btn btn-solid" href="/add">+ {{ T('add_medicine') }}</a>
 </div>
 {% endif %}
 {% endif %}
@@ -32,31 +32,31 @@
 
 {% if expiring %}
 <h2>{{ T('expiring_soon_list') }}</h2>
-<div class="cards">
+<ul class="rows">
   {% for m in expiring %}
-  <article class="card expiring">
-    <a class="card-title" href="/medicine/{{ m.id }}">{{ badge(m) }}{{ m.name }}</a>
-    <p class="card-line">{{ m.quantity }} {{ m.unit }}</p>
-    <p class="card-line expiry">
+  <li class="row expiring">
+    <a class="row-title" href="/medicine/{{ m.id }}">{{ badge(m) }}{{ m.name }}</a>
+    <p class="row-meta">{{ m.quantity }} {{ m.unit }}</p>
+    <p class="row-meta expiry">
       {% if m.expiry_date %}{{ m.expiry_date }} ({{ m.days_until }}){% else %}{{ T('no_expiry') }}{% endif %}
     </p>
-  </article>
+  </li>
   {% endfor %}
-</div>
+</ul>
 {% endif %}
 
 {% if others %}
 {% if not expiring %}<h2 class="visually-hidden">{{ T('list_title') }}</h2>{% endif %}
-<div class="cards">
+<ul class="rows">
   {% for m in others %}
-  <article class="card">
-    <a class="card-title" href="/medicine/{{ m.id }}">{{ badge(m) }}{{ m.name }}</a>
-    <p class="card-line">{{ m.quantity }} {{ m.unit }}</p>
-    <p class="card-line expiry">
+  <li class="row">
+    <a class="row-title" href="/medicine/{{ m.id }}">{{ badge(m) }}{{ m.name }}</a>
+    <p class="row-meta">{{ m.quantity }} {{ m.unit }}</p>
+    <p class="row-meta expiry">
       {% if m.expiry_date %}{{ m.expiry_date }}{% else %}{{ T('no_expiry') }}{% endif %}
     </p>
-  </article>
+  </li>
   {% endfor %}
-</div>
+</ul>
 {% endif %}
 {% endblock %}

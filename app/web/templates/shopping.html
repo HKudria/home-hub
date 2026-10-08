@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 {% block content %}
-<h2 class="page-subtitle">{{ T('nav_shopping') }}</h2>
+<h2 class="page-title">{{ T('nav_shopping') }}</h2>
 
 <form method="post" action="/shopping/add" class="search-form">
   <input type="text" name="names" placeholder="{{ T('list_placeholder') }}">
-  <button type="submit">{{ T('save') }}</button>
+  <button type="submit" class="btn btn-solid">{{ T('save') }}</button>
 </form>
 
 {% if not unbought and not bought %}
@@ -12,12 +12,12 @@
 {% endif %}
 
 {% if unbought %}
-<div class="cards">
+<div class="rows">
   {% for item in unbought %}
-  <form method="post" action="/shopping/check/{{ item.id }}" class="card shopping-item">
+  <form method="post" action="/shopping/check/{{ item.id }}" class="row shopping-item">
     <button type="submit" class="check-btn" aria-label="{{ T('list_bought', name=item.name) }}">&#9745;</button>
-    <span class="card-title">{{ item.name }}</span>
-    <span class="card-line">{{ item.added_by }} &middot; {{ item.added_at[:10] }}</span>
+    <span class="row-title">{{ item.name }}</span>
+    <span class="row-meta">{{ item.added_by }} &middot; {{ item.added_at[:10] }}</span>
   </form>
   {% endfor %}
 </div>
@@ -25,13 +25,13 @@
 
 {% if bought %}
 <h3 class="section-heading">{{ T('bought_section') }}</h3>
-<ul class="bought-list">
+<ul class="done-list">
   {% for item in bought %}
   <li>{{ item.name }} &mdash; {{ item.bought_by }}</li>
   {% endfor %}
 </ul>
 <form method="post" action="/shopping/clear" class="action-form">
-  <button type="submit">{{ T('clear_bought') }}</button>
+  <button type="submit" class="btn btn-danger">{{ T('clear_bought') }}</button>
 </form>
 {% endif %}
 

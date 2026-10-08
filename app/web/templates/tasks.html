@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-<h2 class="page-subtitle">{{ T('nav_tasks') }}</h2>
+<h2 class="page-title">{{ T('nav_tasks') }}</h2>
 
 <form method="post" action="/tasks/add" class="add-form">
   {% if error_task %}<p class="error-msg">{{ T('task_title_required') }}</p>{% endif %}
@@ -18,7 +18,7 @@
       {% endfor %}
     </select>
   </label>
-  <button type="submit">{{ T('save') }}</button>
+  <button type="submit" class="btn btn-solid">{{ T('save') }}</button>
 </form>
 
 {% if not open %}
@@ -26,21 +26,21 @@
 {% endif %}
 
 {% if open %}
-<div class="cards">
+<div class="rows">
   {% for task in open %}
-  <form method="post" action="/tasks/complete/{{ task.id }}" class="card shopping-item">
+  <form method="post" action="/tasks/complete/{{ task.id }}" class="row shopping-item">
     <button type="submit" class="check-btn" aria-label="{{ T('task_done', title=task.title) }}">&#10003;</button>
-    <span class="card-title">{{ task.title }}</span>
+    <span class="row-title">{{ task.title }}</span>
     {% if task.due_date %}
       {% if task.due_date < today %}
       <span class="badge badge-text badge-bad">{{ T('task_overdue') }} {{ task.due_date }}</span>
       {% elif task.due_date == today %}
       <span class="badge badge-text badge-warn">{{ T('task_due', date=task.due_date) }}</span>
       {% else %}
-      <span class="card-line">{{ T('task_due', date=task.due_date) }}</span>
+      <span class="row-meta">{{ T('task_due', date=task.due_date) }}</span>
       {% endif %}
     {% endif %}
-    <span class="card-line">{{ T('task_added_by', who=task.created_by) }}{% if task.assignee_name %} &rarr; {{ task.assignee_name }}{% endif %}</span>
+    <span class="row-meta">{{ T('task_added_by', who=task.created_by) }}{% if task.assignee_name %} &rarr; {{ task.assignee_name }}{% endif %}</span>
   </form>
   {% endfor %}
 </div>
@@ -48,7 +48,7 @@
 
 {% if done %}
 <h3 class="section-heading">{{ T('done_section') }}</h3>
-<ul class="bought-list">
+<ul class="done-list">
   {% for task in done %}
   <li>{{ task.title }} &mdash; {{ T('task_done_by', who=task.done_by) }}</li>
   {% endfor %}

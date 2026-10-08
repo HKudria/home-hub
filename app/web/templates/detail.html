@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <article class="card detail">
-  <h2>{{ m.name }}</h2>
+  <h2 class="detail-name">{{ m.name }}</h2>
   <h3 class="section-heading">{{ T('section_info') }}</h3>
   <dl>
     {% if m.active_ingredient %}
@@ -42,21 +42,21 @@
 
   <div class="actions">
     <form method="post" action="/medicine/{{ m.id }}/take" class="action-form">
-      <input type="number" name="amount" value="1" min="0" step="any" class="amount-input">
-      <button type="submit">{{ T('take_dose') }}</button>
+      <input type="number" name="amount" value="1" min="0" step="any" class="amount-input" aria-label="{{ T('quantity') }}">
+      <button type="submit" class="btn btn-solid">{{ T('take_dose') }}</button>
     </form>
     <form method="post" action="/medicine/{{ m.id }}/open" class="action-form">
-      <button type="submit">{{ T('mark_opened') }}</button>
+      <button type="submit" class="btn btn-secondary">{{ T('mark_opened') }}</button>
     </form>
     <form method="post" action="/medicine/{{ m.id }}/discard" class="action-form">
-      <button type="submit">{{ T('discard') }}</button>
+      <button type="submit" class="btn btn-danger">{{ T('discard') }}</button>
     </form>
     {% if m.photo_path %}
     <form method="post" action="/medicine/{{ m.id }}/reread" class="action-form">
-      <button type="submit">{{ T('reread_photo') }}</button>
+      <button type="submit" class="btn btn-secondary">{{ T('reread_photo') }}</button>
     </form>
     {% endif %}
-    <a class="action-form" href="/medicine/{{ m.id }}/edit"><button type="button">{{ T('edit') }}</button></a>
+    <a class="btn btn-secondary" href="/medicine/{{ m.id }}/edit">{{ T('edit') }}</a>
   </div>
 </article>
 <p><a class="back-link" href="/">&larr; {{ T('list_title') }}</a></p>
