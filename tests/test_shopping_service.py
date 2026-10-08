@@ -64,6 +64,13 @@ class ShoppingServiceTest(unittest.TestCase):
         self.assertEqual(row["bought_by"], "zoe")
         self.assertIsNotNone(row["bought_at"])
 
+    def test_check_off_unicode_case(self):
+        svc, _ = self.make_svc()
+        svc.add_items(["Żółtko"], actor="herman")
+        row = svc.check_off("żółtko", actor="zoe")
+        self.assertIsNotNone(row)
+        self.assertEqual(row["bought"], 1)
+
     def test_check_off_by_id(self):
         svc, _ = self.make_svc()
         svc.add_items(["Milk"], actor="herman")

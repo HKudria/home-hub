@@ -40,9 +40,9 @@ class ShoppingService:
                 "SELECT * FROM shopping_items WHERE id=? AND bought=0",
                 (int(query),)).fetchone()
         else:
-            row = self.conn.execute(
-                "SELECT * FROM shopping_items WHERE bought=0 AND lower(name)=lower(?)",
-                (query.strip(),)).fetchone()
+            key = query.strip().lower()
+            row = next(
+                (u for u in self.list_unbought() if u["name"].lower() == key), None)
         if row is None:
             return None
         self.conn.execute(
