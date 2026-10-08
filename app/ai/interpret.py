@@ -1,12 +1,14 @@
 import json, re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import httpx
 
 PROMPT = (
     "Classify the user's message about their home medicine cabinet. Reply ONLY with JSON: "
-    '{"action":"take|opened|query_qty|expiring|symptom|unknown","medicine_query":"<which medicine, lowercase, or empty>","amount":<number, default 1>,"symptom":"<symptom if any, in English>"}\n'
+    '{"action":"take|opened|query_qty|expiring|symptom|addlist|bought|showlist|unknown","medicine_query":"<which medicine, lowercase, or empty>","amount":<number, default 1>,"symptom":"<symptom if any, in English>","items":["<shopping item>", ...]}\n'
     'Examples: "took 2 ibuprofen" -> take; "открыл сироп" -> opened; "сколько парацетамола?" -> query_qty; '
-    '"что скоро истекает?" -> expiring; "болит голова, что есть?" -> symptom; greetings -> unknown.'
+    '"что скоро истекает?" -> expiring; "болит голова, что есть?" -> symptom; '
+    '"add milk and bread" -> addlist with items ["milk","bread"]; "bought milk" -> bought with medicine_query "milk"; '
+    '"show shopping list" / "что в списке?" -> showlist; greetings -> unknown.'
 )
 
 @dataclass
@@ -15,8 +17,10 @@ class Intent:
     medicine_query: str = ""
     amount: float = 1
     symptom: str = ""
+    items: list[str] = field(default_factory=list)
 
-VALID = {"take", "opened", "query_qty", "expiring", "symptom", "unknown"}
+VALID = {"take", "opened", "query_qty", "expiring", "symptom",
+         "addlist", "bought", "showlist", "unknown"}
 
 def parse_intent(text: str) -> Intent | None:
     m = re.search(r"\{.*\}", text, re.DOTALL)
@@ -35,8 +39,17 @@ def parse_intent(text: str) -> Intent | None:
         amount = float(raw or 1)
     except (ValueError, TypeError):
         return None
+    items: list[str] = []
+    raw_items = d.get("items")
+    try:
+        if isinstance(raw_items, list):
+            for it in raw_items:
+                if isinstance(it, str) and it.strip():
+                    items.append(it.strip())
+    except (TypeError, ValueError):
+        items = []
     return Intent(action=d["action"], medicine_query=str(d.get("medicine_query", "")).lower(),
-                  amount=amount, symptom=str(d.get("symptom", "")))
+                  amount=amount, symptom=str(d.get("symptom", "")), items=items)
 
 async def interpret(settings, text: str) -> Intent:
     payload = {"model": settings.zai_text_model,
