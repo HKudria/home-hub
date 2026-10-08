@@ -15,6 +15,7 @@ from starlette.datastructures import UploadFile
 from app.ai.client import extract_medicine
 from app.i18n import LANGS, t
 from app.services.medicine_service import MedicineService
+from app.services.shopping_service import ShoppingService
 
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 templates.env.globals["LANGS"] = LANGS
@@ -74,6 +75,10 @@ def build_web_router(services, conn, default_lang: str = "en", data_dir: str = "
     def _svc() -> MedicineService:
         """Real service when injected (Task 13), lazy fallback for tests."""
         return services.get("medicines") or MedicineService(conn)
+
+    def _shop() -> ShoppingService:
+        """Real service when injected, lazy fallback for tests."""
+        return services.get("shopping") or ShoppingService(conn)
 
     def page_context(request: Request, **extra):
         lang = request.cookies.get("lang", default_lang)
@@ -222,6 +227,41 @@ def build_web_router(services, conn, default_lang: str = "en", data_dir: str = "
             "ai_status": ai_status,
         })
         return RedirectResponse(f"/medicine/{mid}", status_code=303)
+
+    # ---- Shopping list ---------------------------------------------
+
+    @router.get("/shopping")
+    async def shopping_view(request: Request):
+        svc = _shop()
+        return templates.TemplateResponse(
+            request, "shopping.html",
+            page_context(request, unbought=svc.list_unbought(),
+                         bought=svc.list_bought(20),
+                         activity=svc.recent_activity(15)))
+
+    @router.post("/shopping/add")
+    async def shopping_add(request: Request):
+        form = await request.form()
+        names = (form.get("names") or "").split(",")
+        _shop().add_items(names, "web")
+        return RedirectResponse("/shopping", status_code=303)
+
+    @router.post("/shopping/check/{item_id}")
+    async def shopping_check(item_id: int):
+        svc = _shop()
+        row = conn.execute(
+            "SELECT bought FROM shopping_items WHERE id=?", (item_id,)).fetchone()
+        if row is not None:
+            if row["bought"]:
+                svc.uncheck(item_id)
+            else:
+                svc.check_off(str(item_id), "web")
+        return RedirectResponse("/shopping", status_code=303)
+
+    @router.post("/shopping/clear")
+    async def shopping_clear():
+        _shop().clear_bought()
+        return RedirectResponse("/shopping", status_code=303)
 
     # ---- Detail actions -------------------------------------------
 
