@@ -42,6 +42,16 @@ CREATE TABLE IF NOT EXISTS allowed_users (
   role TEXT NOT NULL DEFAULT 'member',
   lang TEXT NOT NULL DEFAULT 'pl'
 );
+CREATE TABLE IF NOT EXISTS shopping_items (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  added_by TEXT NOT NULL DEFAULT '',
+  added_at TEXT NOT NULL DEFAULT (datetime('now')),
+  bought INTEGER NOT NULL DEFAULT 0,
+  bought_by TEXT,
+  bought_at TEXT,
+  from_medicine_id INTEGER
+);
 """
 
 def init_db(db_path: str) -> sqlite3.Connection:
