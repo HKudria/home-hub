@@ -52,6 +52,18 @@ CREATE TABLE IF NOT EXISTS shopping_items (
   bought_at TEXT,
   from_medicine_id INTEGER
 );
+CREATE TABLE IF NOT EXISTS tasks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  created_by TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  done INTEGER NOT NULL DEFAULT 0,
+  done_by TEXT,
+  done_at TEXT,
+  due_date TEXT,
+  assignee_id INTEGER,
+  assignee_name TEXT
+);
 """
 
 def init_db(db_path: str) -> sqlite3.Connection:
