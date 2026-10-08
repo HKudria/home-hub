@@ -16,6 +16,7 @@ from app.ai.client import extract_medicine
 from app.i18n import LANGS, t
 from app.services.medicine_service import MedicineService
 from app.services.shopping_service import ShoppingService
+from app.services.task_service import TaskService
 
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 templates.env.globals["LANGS"] = LANGS
@@ -66,6 +67,17 @@ def _to_int(value, default=None):
         return int(value)
     except (TypeError, ValueError):
         return default
+
+
+def _is_full_date(value: str) -> bool:
+    """Strict ISO calendar date (rejects e.g. 2026-13-01)."""
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+        return False
+    try:
+        datetime.date.fromisoformat(value)
+    except ValueError:
+        return False
+    return True
 
 
 def build_web_router(services, conn, default_lang: str = "en", data_dir: str = ".",
@@ -262,6 +274,56 @@ def build_web_router(services, conn, default_lang: str = "en", data_dir: str = "
     async def shopping_clear():
         _shop().clear_bought()
         return RedirectResponse("/shopping", status_code=303)
+
+    # ---- Family tasks ----------------------------------------------
+
+    def _tasks() -> TaskService:
+        """Real service when injected, lazy fallback for tests."""
+        return services.get("tasks") or TaskService(conn)
+
+    def _members():
+        return conn.execute(
+            "SELECT telegram_id, name FROM allowed_users WHERE role='member' "
+            "ORDER BY name").fetchall()
+
+    def _tasks_ctx(request: Request, **extra):
+        ctx = {"open": _tasks().list_open(), "done": _tasks().list_done(20),
+               "members": _members(), "values": {},
+               "today": datetime.date.today().isoformat()}
+        ctx.update(extra)
+        return page_context(request, **ctx)
+
+    @router.get("/tasks")
+    async def tasks_view(request: Request):
+        return templates.TemplateResponse(request, "tasks.html",
+                                          _tasks_ctx(request))
+
+    @router.post("/tasks/add")
+    async def tasks_add(request: Request):
+        form = await request.form()
+        title = (form.get("title") or "").strip()
+        due = (form.get("due_date") or "").strip()
+        if not title or (due and not _is_full_date(due)):
+            return templates.TemplateResponse(
+                request, "tasks.html",
+                _tasks_ctx(request, values={"title": title, "due_date": due},
+                           error_task=True),
+                status_code=400)
+        assignee_id = assignee_name = None
+        member_id = _to_int(form.get("assignee"))
+        if member_id is not None:
+            row = conn.execute(
+                "SELECT name FROM allowed_users WHERE telegram_id=? "
+                "AND role='member'", (member_id,)).fetchone()
+            if row is not None:
+                assignee_id, assignee_name = member_id, row["name"]
+        _tasks().add_task(title, "web", due or None, assignee_id, assignee_name)
+        return RedirectResponse("/tasks", status_code=303)
+
+    @router.post("/tasks/complete/{task_id}")
+    async def tasks_complete(task_id: int):
+        _tasks().toggle(task_id, "web")
+        return RedirectResponse("/tasks", status_code=303)
 
     # ---- Detail actions -------------------------------------------
 

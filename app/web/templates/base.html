@@ -11,6 +11,7 @@
     <h1><a href="/">{{ T('app_name') }}</a></h1>
     <a class="add-link" href="/add">+ {{ T('add_medicine') }}</a>
     <a class="add-link" href="/shopping">&#128722; {{ T('nav_shopping') }}</a>
+    <a class="add-link" href="/tasks">&#9745; {{ T('nav_tasks') }}</a>
     <nav class="langs" aria-label="{{ T('language') }}">
       {% for code in LANGS %}
       <a href="/lang/{{ code }}" class="lang-link{% if code == lang %} active{% endif %}">{{ code | upper }}</a>

@@ -93,6 +93,13 @@ MESSAGES: dict[str, dict[str, str]] = {
         "task_overdue": "OVERDUE",
         "task_digest": "Tasks due:",
         "nav_tasks": "Tasks",
+        "done_section": "Done",
+        "form_title": "Title",
+        "form_due": "Due date",
+        "form_assignee": "Assignee",
+        "task_added_by": "added by {who}",
+        "task_done_by": "done by {who}",
+        "task_title_required": "Title is required.",
         "help_text": (
             "Just write to me in plain words, for example:\n"
             "• took 1 paracetamol\n"
@@ -193,6 +200,13 @@ MESSAGES: dict[str, dict[str, str]] = {
         "task_overdue": "ZALEGŁE",
         "task_digest": "Zadania na dziś:",
         "nav_tasks": "Zadania",
+        "done_section": "Wykonane",
+        "form_title": "Tytuł",
+        "form_due": "Termin",
+        "form_assignee": "Wykonawca",
+        "task_added_by": "dodał: {who}",
+        "task_done_by": "wykonał: {who}",
+        "task_title_required": "Tytuł jest wymagany.",
         "help_text": (
             "Pisz do mnie zwykłymi słowami, na przykład:\n"
             "• wziąłem 1 paracetamol\n"
@@ -293,6 +307,13 @@ MESSAGES: dict[str, dict[str, str]] = {
         "task_overdue": "ПРОСРОЧЕНО",
         "task_digest": "Задачи на сегодня:",
         "nav_tasks": "Задачи",
+        "done_section": "Выполнено",
+        "form_title": "Название",
+        "form_due": "Срок",
+        "form_assignee": "Исполнитель",
+        "task_added_by": "добавил: {who}",
+        "task_done_by": "выполнил: {who}",
+        "task_title_required": "Укажите название.",
         "help_text": (
             "Просто напишите мне обычными словами, например:\n"
             "• принял 1 парацетамол\n"
@@ -393,6 +414,13 @@ MESSAGES: dict[str, dict[str, str]] = {
         "task_overdue": "ПРОСТРОЧЕНО",
         "task_digest": "Завдання на сьогодні:",
         "nav_tasks": "Завдання",
+        "done_section": "Виконано",
+        "form_title": "Назва",
+        "form_due": "Термін",
+        "form_assignee": "Виконавець",
+        "task_added_by": "додав: {who}",
+        "task_done_by": "виконав: {who}",
+        "task_title_required": "Вкажіть назву.",
         "help_text": (
             "Пишіть мені звичайними словами, наприклад:\n"
             "• прийняв 1 парацетамол\n"

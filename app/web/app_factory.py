@@ -12,7 +12,7 @@ def create_test_app(conn, data_dir: str = ".", settings=None):
     app = FastAPI()
     app.state.data_dir = data_dir
     app.include_router(
-        build_web_router({"medicines": None, "shopping": None}, conn, default_lang="en",
+        build_web_router({"medicines": None, "shopping": None, "tasks": None}, conn, default_lang="en",
                          data_dir=data_dir, settings=settings)
     )
     app.mount("/static", StaticFiles(directory=str(pathlib.Path(__file__).parent / "static")), name="static")

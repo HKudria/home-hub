@@ -77,6 +77,15 @@ h2 { font-size: 1rem; color: #555; margin: 1rem 0 0.5rem; }
 .badge-bad { background: var(--bad); }
 .badge-neutral { background: #bbb; }
 
+/* Text pill variant (task due/overdue) */
+.badge-text {
+  width: auto; height: auto;
+  padding: 0.1rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #fff;
+}
+
 .empty { color: #666; }
 
 /* Friendly empty cabinet */
