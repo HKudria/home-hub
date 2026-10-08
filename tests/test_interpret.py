@@ -59,6 +59,14 @@ def test_donetask_action():
     assert i.action == "donetask"
     assert i.medicine_query == "pay bills"
 
+def test_items_preserve_original_language():
+    i = parse_intent('{"action":"addlist","medicine_query":"","amount":1,"symptom":"","items":["хліб","молоко"]}')
+    assert i.items == ["хліб", "молоко"]
+
+def test_task_title_preserves_original_language():
+    i = parse_intent('{"action":"addtask","task_title":"полити квіти","due_date":null,"assignee":"Анна","medicine_query":"","amount":1,"symptom":""}')
+    assert i.task_title == "полити квіти"
+
 def test_showtasks_action():
     i = parse_intent('{"action":"showtasks"}')
     assert i.action == "showtasks"

@@ -3,6 +3,9 @@ from dataclasses import dataclass, field
 import httpx
 
 PROMPT = (
+    "COPY RULE: item names (items), medicine_query, and task_title MUST be copied VERBATIM from the user's message "
+    "in the ORIGINAL language and script. Never translate, transliterate, or re-spell them. "
+    "Only the symptom field is normalized to English.\n"
     "Classify the user's message about their home medicine cabinet or family tasks. Reply ONLY with JSON: "
     '{"action":"take|opened|query_qty|expiring|symptom|addlist|bought|showlist|addtask|donetask|showtasks|unknown",'
     '"medicine_query":"<which medicine or task title, lowercase, or empty>","amount":<number, default 1>,'
