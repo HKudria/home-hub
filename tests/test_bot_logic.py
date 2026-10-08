@@ -2,7 +2,8 @@ from app.db import init_db
 from app.services.medicine_service import MedicineService
 from app.services.shopping_service import ShoppingService
 from app.bot.router import (match_medicines, symptom_matches, describe_matches,
-                            parse_pick_data, format_list_contents)
+                            parse_pick_data, format_list_contents,
+                            format_open_tasks)
 
 def make(tmp_path):
     conn = init_db(str(tmp_path / "t.db"))
@@ -45,3 +46,28 @@ def test_format_list_contents(tmp_path):
 
 def test_format_list_contents_empty():
     assert format_list_contents([], "en") == ""
+
+def test_format_open_tasks_overdue():
+    rows = [{"title": "pay bills", "due_date": "2026-10-01",
+             "assignee_name": "Anna"}]
+    assert format_open_tasks(rows, "en", "2026-10-08") == \
+        "Open tasks:\n• OVERDUE pay bills — due 2026-10-01 → Anna"
+
+def test_format_open_tasks_due_today():
+    rows = [{"title": "water plants", "due_date": "2026-10-08",
+             "assignee_name": "Anna"}]
+    assert format_open_tasks(rows, "en", "2026-10-08") == \
+        "Open tasks:\n• water plants — due 2026-10-08 → Anna"
+
+def test_format_open_tasks_no_due():
+    rows = [{"title": "tidy up", "due_date": None, "assignee_name": "Anna"}]
+    assert format_open_tasks(rows, "en", "2026-10-08") == \
+        "Open tasks:\n• tidy up → Anna"
+
+def test_format_open_tasks_no_assignee():
+    rows = [{"title": "buy salt", "due_date": "2026-10-08", "assignee_name": None}]
+    assert format_open_tasks(rows, "en", "2026-10-08") == \
+        "Open tasks:\n• buy salt — due 2026-10-08"
+
+def test_format_open_tasks_empty():
+    assert format_open_tasks([], "en", "2026-10-08") == ""

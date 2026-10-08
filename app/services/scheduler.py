@@ -3,7 +3,9 @@ from aiogram import Bot
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from app.services.alerts import evaluate
 from app.services.backup import run_backup
+from app.services.task_service import TaskService
 from app.bot.notify import alert_text, alert_keyboard
+from app.bot.router import format_open_tasks, get_user_lang
 from app.i18n import t
 
 _FULL_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -26,6 +28,38 @@ async def run_daily_check(conn, settings, bot: Bot, now_date: str | None = None)
         if a.kind.startswith("low_stock"):
             conn.execute("UPDATE medicines SET low_stock_notified=1 WHERE id=?", (a.medicine_id,))
     conn.commit()
+    return sent
+
+async def run_task_digest(conn, settings, bot: Bot, today: str | None = None) -> int:
+    """Daily digest of due/overdue tasks: full list to the admin, each
+    assignee gets their own list. Returns the number of sends that
+    succeeded."""
+    today = today or datetime.date.today().isoformat()
+    svc = TaskService(conn)
+    rows = svc.due_and_overdue(today)
+    if not rows:
+        return 0
+    sent = 0
+    lang = get_user_lang(conn, settings.admin_telegram_id)
+    try:
+        await bot.send_message(settings.admin_telegram_id,
+                               t(lang, "task_digest") + "\n"
+                               + format_open_tasks(rows, lang, today))
+        sent += 1
+    except Exception:
+        pass  # one failed send must not block the assignee digests
+    assignee_ids = sorted({r["assignee_id"] for r in rows
+                           if r["assignee_id"]
+                           and r["assignee_id"] != settings.admin_telegram_id})
+    for tg_id in assignee_ids:
+        own = svc.for_assignee(tg_id, today)
+        own_lang = get_user_lang(conn, tg_id)
+        try:
+            await bot.send_message(tg_id, t(own_lang, "task_digest") + "\n"
+                                   + format_open_tasks(own, own_lang, today))
+            sent += 1
+        except Exception:
+            continue
     return sent
 
 async def retry_needs_ai(conn, settings, extract_fn):
@@ -53,6 +87,8 @@ async def retry_needs_ai(conn, settings, extract_fn):
 def schedule_jobs(conn, settings, bot: Bot, scheduler: AsyncIOScheduler, extract_fn):
     scheduler.add_job(run_daily_check, "cron", hour=settings.daily_check_hour, minute=0,
                       args=[conn, settings, bot], id="daily_check", replace_existing=True)
+    scheduler.add_job(run_task_digest, "cron", hour=settings.daily_check_hour, minute=0,
+                      args=[conn, settings, bot], id="task_digest", replace_existing=True)
     scheduler.add_job(retry_needs_ai, "interval", hours=1,
                       args=[conn, settings, extract_fn], id="ai_retry", replace_existing=True)
     scheduler.add_job(run_backup, "cron", hour=3, minute=0,

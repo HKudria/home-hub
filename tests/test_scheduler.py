@@ -4,7 +4,8 @@ from types import SimpleNamespace
 from app.config import Settings
 from app.db import init_db
 from app.services.medicine_service import MedicineService
-from app.services.scheduler import run_daily_check, retry_needs_ai
+from app.services.scheduler import run_daily_check, retry_needs_ai, run_task_digest
+from app.services.task_service import TaskService
 
 def make_settings():
     return Settings("k", "http://x", "m", "m2", "t", 1, 9, "", ".", 14)
@@ -40,3 +41,38 @@ async def test_retry_updates_and_preserves_expiry(tmp_path):
     row = conn.execute("SELECT * FROM medicines WHERE id=?", (mid,)).fetchone()
     assert row["name"] == "New" and row["ai_status"] == "ok"
     assert row["expiry_date"] == "2027-01-01"
+
+@pytest.mark.asyncio
+async def test_task_digest_unassigned_admin_only(tmp_path):
+    conn = init_db(str(tmp_path / "t.db"))
+    TaskService(conn).add_task("pay bills", "Tester", due_date="2026-10-08")
+    bot = AsyncMock()
+    n = await run_task_digest(conn, make_settings(), bot, today="2026-10-08")
+    assert n == 1
+    bot.send_message.assert_awaited_once()
+    assert bot.send_message.await_args.args[0] == 1  # admin telegram id
+
+@pytest.mark.asyncio
+async def test_task_digest_assigned_member_gets_own_list(tmp_path):
+    conn = init_db(str(tmp_path / "t.db"))
+    conn.execute("INSERT INTO allowed_users (telegram_id, name, role, lang) "
+                 "VALUES (2, 'Anna', 'member', 'pl')")
+    conn.commit()
+    TaskService(conn).add_task("water plants", "Tester", due_date="2026-10-08",
+                               assignee_id=2, assignee_name="Anna")
+    bot = AsyncMock()
+    n = await run_task_digest(conn, make_settings(), bot, today="2026-10-08")
+    assert n == 2
+    assert bot.send_message.await_count == 2
+    sent_to = {bot.send_message.await_args_list[0].args[0],
+               bot.send_message.await_args_list[1].args[0]}
+    assert sent_to == {1, 2}
+
+@pytest.mark.asyncio
+async def test_task_digest_no_due_tasks_sends_nothing(tmp_path):
+    conn = init_db(str(tmp_path / "t.db"))
+    TaskService(conn).add_task("someday", "Tester")
+    bot = AsyncMock()
+    n = await run_task_digest(conn, make_settings(), bot, today="2026-10-08")
+    assert n == 0
+    bot.send_message.assert_not_awaited()

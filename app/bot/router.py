@@ -23,6 +23,7 @@ from app.config import Settings
 from app.i18n import DEFAULT_LANG, t
 from app.services.medicine_service import MedicineService
 from app.services.shopping_service import ShoppingService
+from app.services.task_service import TaskService
 
 LANG_CODES = ("en", "pl", "ru", "uk")
 
@@ -112,6 +113,27 @@ def format_list_contents(rows, lang: str) -> str:
         return ""
     lines = [t(lang, "list_contents")]
     lines += [f"• {r['name']}" for r in rows]
+    return "\n".join(lines)
+
+
+def format_open_tasks(rows, lang: str, today: str) -> str:
+    """Render open task rows as "Open tasks:" + bullet lines.
+
+    A due date before `today` gets the OVERDUE prefix; a due date of today
+    (or later) is shown after an em dash. The assignee (if any) is appended
+    as " → name". Returns "" for an empty list so the caller can send
+    task_empty instead.
+    """
+    if not rows:
+        return ""
+    lines = [t(lang, "task_list")]
+    for r in rows:
+        due = r["due_date"]
+        who = t(lang, "task_assigned_note", who=r["assignee_name"]) \
+            if r["assignee_name"] else ""
+        mark = f"{t(lang, 'task_overdue')} " if due and due < today else ""
+        tail = f" —{t(lang, 'task_due', date=due)}" if due else ""
+        lines.append(f"• {mark}{r['title']}{tail}{who}")
     return "\n".join(lines)
 
 
@@ -337,6 +359,59 @@ def build_router(conn: sqlite3.Connection, settings: Settings,
                 await message.reply(body)
             else:
                 await message.reply(t(lang, "list_empty"))
+
+        elif intent.action == "addtask":
+            svc_tasks = services.get("tasks") or TaskService(conn)
+            actor = actor_name(message.from_user)
+            if not intent.task_title:
+                await message.reply(t(lang, "no_match"))
+                return
+            assignee_id = None
+            assignee_name = None
+            if intent.assignee:
+                # Python-side case-insensitive substring match so Unicode
+                # case folding (e.g. Polish/Ukrainian names) behaves.
+                needle = intent.assignee.lower()
+                members = conn.execute(
+                    "SELECT telegram_id, name FROM allowed_users "
+                    "WHERE role='member' AND name != ''").fetchall()
+                matches = [m for m in members if needle in m["name"].lower()]
+                if len(matches) == 1:
+                    assignee_id = matches[0]["telegram_id"]
+                    assignee_name = matches[0]["name"]
+            row = svc_tasks.add_task(intent.task_title, actor, intent.due_date,
+                                     assignee_id, assignee_name)
+            if assignee_id is not None:
+                await message.reply(t(lang, "task_added", title=row["title"])
+                                    + t(lang, "task_assigned_note", who=assignee_name))
+                try:
+                    await bot.send_message(assignee_id, t(
+                        get_user_lang(conn, assignee_id), "task_new_dm",
+                        who=actor, title=row["title"],
+                        due=(f" {intent.due_date}" if intent.due_date else "")))
+                except Exception:
+                    pass  # the task exists; a failed DM must not fail the reply
+            else:
+                note = t(lang, "task_unassigned_note", who=intent.assignee) \
+                    if intent.assignee else ""
+                await message.reply(t(lang, "task_added", title=row["title"]) + note)
+
+        elif intent.action == "donetask":
+            svc_tasks = services.get("tasks") or TaskService(conn)
+            row = svc_tasks.complete(intent.medicine_query, actor_name(message.from_user))
+            if row:
+                await message.reply(t(lang, "task_done", title=row["title"]))
+            else:
+                await message.reply(t(lang, "no_match"))
+
+        elif intent.action == "showtasks":
+            svc_tasks = services.get("tasks") or TaskService(conn)
+            rows = svc_tasks.list_open()
+            body = format_open_tasks(rows, lang, datetime.date.today().isoformat())
+            if body:
+                await message.reply(body)
+            else:
+                await message.reply(t(lang, "task_empty"))
 
         # unknown: ignore unrecognized chatter
 

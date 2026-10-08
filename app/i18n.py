@@ -82,6 +82,17 @@ MESSAGES: dict[str, dict[str, str]] = {
         "detail_discard_after": "Discard after opening",
         "section_info": "Info",
         "section_storage": "Storage & dates",
+        "task_added": "Task added: {title}",
+        "task_assigned_note": " → {who}",
+        "task_unassigned_note": "(couldn't match member '{who}' — left unassigned)",
+        "task_done": "Done: {title} ✓",
+        "task_empty": "No open tasks",
+        "task_list": "Open tasks:",
+        "task_new_dm": "New task from {who}: {title}{due}",
+        "task_due": " due {date}",
+        "task_overdue": "OVERDUE",
+        "task_digest": "Tasks due:",
+        "nav_tasks": "Tasks",
         "help_text": (
             "Just write to me in plain words, for example:\n"
             "• took 1 paracetamol\n"
@@ -91,7 +102,10 @@ MESSAGES: dict[str, dict[str, str]] = {
             "• expiry soon?\n"
             "• add milk\n"
             "• bought milk\n"
-            "• show shopping list\n\n"
+            "• show shopping list\n"
+            "• add task pay bills on friday\n"
+            "• task pay bills is done\n"
+            "• show tasks\n\n"
             "/lang pl — change language"
         ),
     },
@@ -168,6 +182,17 @@ MESSAGES: dict[str, dict[str, str]] = {
         "detail_discard_after": "Wyrzuć po otwarciu",
         "section_info": "Informacje",
         "section_storage": "Przechowywanie i daty",
+        "task_added": "Dodano zadanie: {title}",
+        "task_assigned_note": " → {who}",
+        "task_unassigned_note": "(nie dopasowano członka rodziny '{who}' — zadanie pozostało bez przypisania)",
+        "task_done": "Zrobione: {title} ✓",
+        "task_empty": "Brak otwartych zadań",
+        "task_list": "Otwarte zadania:",
+        "task_new_dm": "Nowe zadanie od {who}: {title}{due}",
+        "task_due": " termin {date}",
+        "task_overdue": "ZALEGŁE",
+        "task_digest": "Zadania na dziś:",
+        "nav_tasks": "Zadania",
         "help_text": (
             "Pisz do mnie zwykłymi słowami, na przykład:\n"
             "• wziąłem 1 paracetamol\n"
@@ -177,7 +202,10 @@ MESSAGES: dict[str, dict[str, str]] = {
             "• co wkrótce traci ważność?\n"
             "• dodaj mleko\n"
             "• kupiłem mleko\n"
-            "• pokaż listę zakupów\n\n"
+            "• pokaż listę zakupów\n"
+            "• dodaj zadanie zapłać rachunki w piątek\n"
+            "• zadanie zapłać rachunki jest zrobione\n"
+            "• pokaż zadania\n\n"
             "/lang pl — zmiana języka"
         ),
     },
@@ -254,6 +282,17 @@ MESSAGES: dict[str, dict[str, str]] = {
         "detail_discard_after": "Выбросить после вскрытия",
         "section_info": "Информация",
         "section_storage": "Хранение и даты",
+        "task_added": "Задача добавлена: {title}",
+        "task_assigned_note": " → {who}",
+        "task_unassigned_note": "(не удалось сопоставить участника '{who}' — оставлено без исполнителя)",
+        "task_done": "Готово: {title} ✓",
+        "task_empty": "Нет открытых задач",
+        "task_list": "Открытые задачи:",
+        "task_new_dm": "Новая задача от {who}: {title}{due}",
+        "task_due": " до {date}",
+        "task_overdue": "ПРОСРОЧЕНО",
+        "task_digest": "Задачи на сегодня:",
+        "nav_tasks": "Задачи",
         "help_text": (
             "Просто напишите мне обычными словами, например:\n"
             "• принял 1 парацетамол\n"
@@ -263,7 +302,10 @@ MESSAGES: dict[str, dict[str, str]] = {
             "• что скоро истекает?\n"
             "• добавь молоко\n"
             "• купил молоко\n"
-            "• покажи список покупок\n\n"
+            "• покажи список покупок\n"
+            "• добавь задачу заплатить за свет в пятницу\n"
+            "• задача заплатить за свет сделана\n"
+            "• покажи задачи\n\n"
             "/lang ru — сменить язык"
         ),
     },
@@ -340,6 +382,17 @@ MESSAGES: dict[str, dict[str, str]] = {
         "detail_discard_after": "Викинути після відкриття",
         "section_info": "Інформація",
         "section_storage": "Зберігання та дати",
+        "task_added": "Завдання додано: {title}",
+        "task_assigned_note": " → {who}",
+        "task_unassigned_note": "(не вдалося зіставити учасника '{who}' — залишено без виконавця)",
+        "task_done": "Готово: {title} ✓",
+        "task_empty": "Немає відкритих завдань",
+        "task_list": "Відкриті завдання:",
+        "task_new_dm": "Нове завдання від {who}: {title}{due}",
+        "task_due": " до {date}",
+        "task_overdue": "ПРОСТРОЧЕНО",
+        "task_digest": "Завдання на сьогодні:",
+        "nav_tasks": "Завдання",
         "help_text": (
             "Пишіть мені звичайними словами, наприклад:\n"
             "• прийняв 1 парацетамол\n"
@@ -349,7 +402,10 @@ MESSAGES: dict[str, dict[str, str]] = {
             "• що скоро спливає?\n"
             "• додай молоко\n"
             "• купив молоко\n"
-            "• покажи список покупок\n\n"
+            "• покажи список покупок\n"
+            "• додай завдання заплатити за світло у п'ятницю\n"
+            "• завдання заплатити за світло виконано\n"
+            "• покажи завдання\n\n"
             "/lang uk — змінити мову"
         ),
     },
