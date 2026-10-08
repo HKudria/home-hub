@@ -4,6 +4,7 @@
 
 <form method="get" action="/" class="search-form">
   <input type="search" name="q" value="{{ q }}" placeholder="{{ T('search_placeholder') }}">
+  <a class="btn btn-solid" href="/add">+ {{ T('add_medicine') }}</a>
 </form>
 
 {% if not expiring and not others %}
