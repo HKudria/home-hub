@@ -18,6 +18,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from app.ai.interpret import Intent, interpret
 from app.bot.notify import callback_to_action
+from app.bot.rule_agent import parse_rule_intent
 from app.bot.users import approve, decline, is_admin, is_allowed, request_approval
 from app.config import Settings
 from app.i18n import DEFAULT_LANG, t
@@ -363,7 +364,10 @@ def build_router(conn: sqlite3.Connection, settings: Settings,
             await message.reply(t(lang, "language"), reply_markup=kb.as_markup())
             return
 
-        intent = await interpret(settings, text)
+        # Deterministic rules first (free, instant); cloud AI as fallback.
+        intent = parse_rule_intent(text)
+        if intent is None:
+            intent = await interpret(settings, text)
 
         if intent.action in ("take", "opened", "query_qty"):
             query = intent.medicine_query or text.strip()
