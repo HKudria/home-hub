@@ -12,6 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from app.config import load_settings
 from app.db import init_db
 from app.services.medicine_service import MedicineService
+from app.services.shopping_service import ShoppingService
 from app.web.routes import build_web_router
 
 logger = logging.getLogger("home-hub.main")
@@ -42,7 +43,8 @@ def create_app(settings) -> FastAPI:
     db_path = os.path.join(settings.data_dir, "hub.db")
     conn = init_db(db_path)
 
-    services = {"medicines": MedicineService(conn)}
+    services = {"medicines": MedicineService(conn),
+               "shopping": ShoppingService(conn)}
 
     # Seed the admin as an allowed bot user (idempotent). Done synchronously
     # so create_app() alone (tests, web-only mode) leaves a usable DB.
