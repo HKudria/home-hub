@@ -13,7 +13,7 @@ import sqlite3
 import httpx
 from aiogram import Bot, F, Router
 from aiogram.filters import Command
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery, KeyboardButton, Message, ReplyKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from app.ai.interpret import Intent, interpret
@@ -150,6 +150,39 @@ def actor_name(user) -> str:
     return user.full_name or (f"@{user.username}" if user.username else "")
 
 
+# Template buttons: kb_* i18n key -> intent they short-circuit to.
+TEMPLATE_BUTTONS: tuple[tuple[str, str], ...] = (
+    ("kb_shopping", "showlist"),
+    ("kb_tasks", "showtasks"),
+    ("kb_expiring", "expiring"),
+    ("kb_language", "language"),
+)
+
+
+def match_template(text: str, lang: str) -> str | None:
+    """Return 'showlist' | 'showtasks' | 'expiring' | 'language' when text equals
+    the localized template button text for lang, else None."""
+    stripped = text.strip()
+    for key, action in TEMPLATE_BUTTONS:
+        if stripped == t(lang, key):
+            return action
+    return None
+
+
+def main_keyboard(lang: str) -> ReplyKeyboardMarkup:
+    """Persistent reply keyboard with the common-request templates."""
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [KeyboardButton(text=t(lang, "kb_shopping")),
+             KeyboardButton(text=t(lang, "kb_tasks"))],
+            [KeyboardButton(text=t(lang, "kb_expiring")),
+             KeyboardButton(text=t(lang, "kb_language"))],
+        ],
+        resize_keyboard=True,
+        is_persistent=True,
+    )
+
+
 async def symptom_terms(settings: Settings, symptom: str) -> list:
     """Translate a symptom to PL/RU/UK via one z.ai text-model call.
 
@@ -233,12 +266,34 @@ def build_router(conn: sqlite3.Connection, settings: Settings,
         await message.reply(t(get_user_lang(conn, message.from_user.id), "which_one"),
                             reply_markup=kb.as_markup())
 
+    async def send_expiring(message: Message, lang: str):
+        """Shared body of the 'expiring' intent and the expiring template."""
+        today = datetime.date.today()
+        horizon = today + datetime.timedelta(days=7)
+        soon = []
+        for r in svc.list_all():
+            if not r["expiry_date"]:
+                continue
+            try:
+                exp = datetime.date.fromisoformat(r["expiry_date"])
+            except (ValueError, TypeError):
+                continue
+            if today <= exp <= horizon:
+                soon.append(r)
+        if not soon:
+            await message.reply(t(lang, "symptom_none"))
+        else:
+            lines = [t(lang, "expiring_soon_list")]
+            lines += [f"• {r['name']} — {r['expiry_date']}" for r in soon]
+            await message.reply("\n".join(lines))
+
     @router.message(Command("start"))
     async def cmd_start(message: Message, bot: Bot):
         tg_id = message.from_user.id
         lang = get_user_lang(conn, tg_id)
         if is_admin(settings, tg_id) or is_allowed(conn, tg_id):
-            await message.reply(t(lang, "approved"))
+            await message.reply(t(lang, "approved"),
+                                reply_markup=main_keyboard(lang))
         else:
             await request_approval(conn, settings, bot, tg_id, actor_name(message.from_user))
             await message.reply(t(lang, "ask_admin"))
@@ -280,6 +335,34 @@ def build_router(conn: sqlite3.Connection, settings: Settings,
             return
         lang = get_user_lang(conn, tg_id)
         text = message.text or ""
+
+        # Template button presses short-circuit before the AI interpreter
+        # (instant and free), still behind the approval gate above.
+        tpl = match_template(text, lang)
+        if tpl == "showlist":
+            svc_shop = services.get("shopping") or ShoppingService(conn)
+            rows = svc_shop.list_unbought()
+            body = format_list_contents(rows, lang)
+            await message.reply(body if body else t(lang, "list_empty"),
+                                reply_markup=main_keyboard(lang))
+            return
+        if tpl == "showtasks":
+            svc_tasks = services.get("tasks") or TaskService(conn)
+            rows = svc_tasks.list_open()
+            body = format_open_tasks(rows, lang, datetime.date.today().isoformat())
+            await message.reply(body if body else t(lang, "task_empty"),
+                                reply_markup=main_keyboard(lang))
+            return
+        if tpl == "expiring":
+            await send_expiring(message, lang)
+            return
+        if tpl == "language":
+            kb = InlineKeyboardBuilder()
+            for code in LANG_CODES:
+                kb.button(text=code.upper(), callback_data=f"setlang:{code}")
+            await message.reply(t(lang, "language"), reply_markup=kb.as_markup())
+            return
+
         intent = await interpret(settings, text)
 
         if intent.action in ("take", "opened", "query_qty"):
@@ -296,24 +379,7 @@ def build_router(conn: sqlite3.Connection, settings: Settings,
                                 intent.action, rows[0]["id"], amount)
 
         elif intent.action == "expiring":
-            today = datetime.date.today()
-            horizon = today + datetime.timedelta(days=7)
-            soon = []
-            for r in svc.list_all():
-                if not r["expiry_date"]:
-                    continue
-                try:
-                    exp = datetime.date.fromisoformat(r["expiry_date"])
-                except (ValueError, TypeError):
-                    continue
-                if today <= exp <= horizon:
-                    soon.append(r)
-            if not soon:
-                await message.reply(t(lang, "symptom_none"))
-            else:
-                lines = [t(lang, "expiring_soon_list")]
-                lines += [f"• {r['name']} — {r['expiry_date']}" for r in soon]
-                await message.reply("\n".join(lines))
+            await send_expiring(message, lang)
 
         elif intent.action == "symptom":
             symptom = intent.symptom or text.strip()
@@ -431,6 +497,20 @@ def build_router(conn: sqlite3.Connection, settings: Settings,
                 if query.message:
                     await do_action(query.message, tg_id, actor,
                                     pending, med_id, amount)
+                await query.answer()
+                return
+
+            if data.startswith("setlang:"):
+                # Template "🌐 Language" inline keyboard: change the user's
+                # language (same UPDATE as /lang) and confirm in the new one.
+                code = data.split(":", 1)[1]
+                if code in LANG_CODES:
+                    conn.execute(
+                        "UPDATE allowed_users SET lang=? WHERE telegram_id=?",
+                        (code, query.from_user.id))
+                    conn.commit()
+                    if query.message:
+                        await query.message.reply(t(code, "language"))
                 await query.answer()
                 return
 

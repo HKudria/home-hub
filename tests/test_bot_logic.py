@@ -3,7 +3,7 @@ from app.services.medicine_service import MedicineService
 from app.services.shopping_service import ShoppingService
 from app.bot.router import (match_medicines, symptom_matches, describe_matches,
                             parse_pick_data, format_list_contents,
-                            format_open_tasks)
+                            format_open_tasks, match_template, main_keyboard)
 
 def make(tmp_path):
     conn = init_db(str(tmp_path / "t.db"))
@@ -71,3 +71,25 @@ def test_format_open_tasks_no_assignee():
 
 def test_format_open_tasks_empty():
     assert format_open_tasks([], "en", "2026-10-08") == ""
+
+def test_match_template_en():
+    assert match_template("🛒 Shopping list", "en") == "showlist"
+    assert match_template("☑ Tasks", "en") == "showtasks"
+    assert match_template("⏰ Expiring soon?", "en") == "expiring"
+    assert match_template("🌐 Language", "en") == "language"
+    assert match_template("took a pill", "en") is None
+    assert match_template("  🛒 Shopping list  ", "en") == "showlist"
+
+def test_match_template_pl():
+    assert match_template("🛒 Lista zakupów", "pl") == "showlist"
+    assert match_template("☑ Zadania", "pl") == "showtasks"
+    assert match_template("⏰ Co się kończy?", "pl") == "expiring"
+    assert match_template("🌐 Język", "pl") == "language"
+    # Button text in one language must not match another language.
+    assert match_template("🛒 Shopping list", "pl") is None
+
+def test_main_keyboard_layout():
+    kb = main_keyboard("en")
+    assert kb.resize_keyboard is True and kb.is_persistent is True
+    assert [btn.text for row in kb.keyboard for btn in row] == [
+        "🛒 Shopping list", "☑ Tasks", "⏰ Expiring soon?", "🌐 Language"]
