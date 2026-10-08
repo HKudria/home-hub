@@ -40,6 +40,41 @@ def test_malformed_items_become_empty():
     i = parse_intent('{"action":"addlist"}')
     assert i is not None and i.items == []
 
+def test_addtask_full():
+    i = parse_intent('{"action":"addtask","medicine_query":"","amount":1,"symptom":"",'
+                     '"items":[],"task_title":" pay bills ","due_date":"2026-10-10","assignee":" Anna "}')
+    assert i.action == "addtask"
+    assert i.task_title == "pay bills"
+    assert i.due_date == "2026-10-10"
+    assert i.assignee == "Anna"
+
+def test_addtask_no_due():
+    i = parse_intent('{"action":"addtask","task_title":"tidy up","due_date":null,"assignee":""}')
+    assert i.task_title == "tidy up"
+    assert i.due_date is None
+    assert i.assignee == ""
+
+def test_donetask_action():
+    i = parse_intent('{"action":"donetask","medicine_query":"pay bills"}')
+    assert i.action == "donetask"
+    assert i.medicine_query == "pay bills"
+
+def test_showtasks_action():
+    i = parse_intent('{"action":"showtasks"}')
+    assert i.action == "showtasks"
+
+def test_bad_due_date_becomes_none():
+    i = parse_intent('{"action":"addtask","task_title":"x","due_date":"friday"}')
+    assert i is not None and i.due_date is None
+    i = parse_intent('{"action":"addtask","task_title":"x","due_date":123}')
+    assert i is not None and i.due_date is None
+    i = parse_intent('{"action":"addtask","task_title":"x","due_date":"2026-13"}')
+    assert i is not None and i.due_date is None
+
+def test_malformed_task_fields_default():
+    i = parse_intent('{"action":"addtask","task_title":5,"assignee":[]}')
+    assert i is not None and i.task_title == "" and i.assignee == "" and i.due_date is None
+
 @pytest.mark.asyncio
 async def test_interpret_fallback(monkeypatch):
     class FakeResp:
