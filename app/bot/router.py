@@ -1,7 +1,8 @@
 """Telegram router: commands, free-text intent dispatch, callback handling.
 
 `build_router(conn, settings, services)` wires every handler against the
-shared sqlite connection and the services dict ({"medicines": MedicineService}).
+shared sqlite connection and the services dict
+({"medicines": MedicineService, "shopping": ShoppingService | None}).
 """
 
 import datetime
@@ -21,6 +22,7 @@ from app.bot.users import approve, decline, is_admin, is_allowed, request_approv
 from app.config import Settings
 from app.i18n import DEFAULT_LANG, t
 from app.services.medicine_service import MedicineService
+from app.services.shopping_service import ShoppingService
 
 LANG_CODES = ("en", "pl", "ru", "uk")
 
@@ -99,6 +101,18 @@ def parse_pick_data(data: str):
     """Return (medicine_id, amount) from 'pick:<id>:<amount>'."""
     parts = data.split(":")
     return int(parts[1]), float(parts[2]) if len(parts) > 2 and parts[2] else 1.0
+
+
+def format_list_contents(rows, lang: str) -> str:
+    """Render unbought shopping-list rows as "Shopping list:" + bullet lines.
+
+    Returns "" for an empty list so the caller can send list_empty instead.
+    """
+    if not rows:
+        return ""
+    lines = [t(lang, "list_contents")]
+    lines += [f"• {r['name']}" for r in rows]
+    return "\n".join(lines)
 
 
 def get_user_lang(conn: sqlite3.Connection, tg_id: int) -> str:
@@ -299,6 +313,31 @@ def build_router(conn: sqlite3.Connection, settings: Settings,
                 await message.reply(t(lang, "symptom_found") + "\n"
                                     + describe_matches_enhanced(rows, lang))
 
+        elif intent.action == "addlist":
+            svc_shop = services.get("shopping") or ShoppingService(conn)
+            added = svc_shop.add_items(intent.items, actor_name(message.from_user))
+            if added:
+                await message.reply(t(lang, "list_added", items=", ".join(added)))
+            else:
+                await message.reply(t(lang, "no_match"))
+
+        elif intent.action == "bought":
+            svc_shop = services.get("shopping") or ShoppingService(conn)
+            row = svc_shop.check_off(intent.medicine_query, actor_name(message.from_user))
+            if row:
+                await message.reply(t(lang, "list_bought", name=row["name"]))
+            else:
+                await message.reply(t(lang, "no_match"))
+
+        elif intent.action == "showlist":
+            svc_shop = services.get("shopping") or ShoppingService(conn)
+            rows = svc_shop.list_unbought()
+            body = format_list_contents(rows, lang)
+            if body:
+                await message.reply(body)
+            else:
+                await message.reply(t(lang, "list_empty"))
+
         # unknown: ignore unrecognized chatter
 
     @router.callback_query(F.data)
@@ -367,12 +406,16 @@ def build_router(conn: sqlite3.Connection, settings: Settings,
                 if query.message:
                     await query.message.reply(t(lang, "snoozed"))
             elif action == "addlist":
-                conn.execute(
-                    "INSERT INTO events (medicine_id, actor, delta, note) VALUES (?,?,0,'shopping_list')",
-                    (val, actor))
-                conn.commit()
-                if query.message:
-                    await query.message.reply(t(lang, "added_to_list"))
+                med = svc.get(val)
+                if med is None:
+                    if query.message:
+                        await query.message.reply(t(lang, "no_match"))
+                else:
+                    svc_shop = services.get("shopping") or ShoppingService(conn)
+                    svc_shop.add_items([med["name"]], actor, from_medicine_id=val)
+                    if query.message:
+                        await query.message.reply(t(lang, "list_added",
+                                                    items=med["name"]))
         except Exception:
             pass  # any error: just ack below
         finally:

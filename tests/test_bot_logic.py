@@ -1,6 +1,8 @@
 from app.db import init_db
 from app.services.medicine_service import MedicineService
-from app.bot.router import match_medicines, symptom_matches, describe_matches, parse_pick_data
+from app.services.shopping_service import ShoppingService
+from app.bot.router import (match_medicines, symptom_matches, describe_matches,
+                            parse_pick_data, format_list_contents)
 
 def make(tmp_path):
     conn = init_db(str(tmp_path / "t.db"))
@@ -33,3 +35,13 @@ def test_parse_pick_data():
     assert parse_pick_data("pick:12:1") == (12, 1.0)
     assert parse_pick_data("pick:7:2.5") == (7, 2.5)
     assert parse_pick_data("pick:9") == (9, 1.0)
+
+def test_format_list_contents(tmp_path):
+    conn = init_db(str(tmp_path / "shop.db"))
+    svc = ShoppingService(conn)
+    svc.add_items(["milk", "bread"], "Tester")
+    rows = svc.list_unbought()
+    assert format_list_contents(rows, "en") == "Shopping list:\n• milk\n• bread"
+
+def test_format_list_contents_empty():
+    assert format_list_contents([], "en") == ""

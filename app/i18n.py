@@ -32,6 +32,11 @@ MESSAGES: dict[str, dict[str, str]] = {
         "discarded": "Marked as discarded 🗑",
         "snoozed": "Snoozed ⏰",
         "added_to_list": "Added to the shopping list 🛒",
+        "list_added": "Added: {items}",
+        "list_bought": "Bought: {name} ✓",
+        "list_empty": "The shopping list is empty",
+        "list_contents": "Shopping list:",
+        "nav_shopping": "Shopping",
         "list_title": "Medicine cabinet",
         "empty_cabinet": "Your cabinet is empty. Add your first medicine!",
         "no_expiry": "No expiry date set",
@@ -77,7 +82,10 @@ MESSAGES: dict[str, dict[str, str]] = {
             "• opened aspirin\n"
             "• how much ibuprofen is left?\n"
             "• I have a headache — anything?\n"
-            "• expiry soon?\n\n"
+            "• expiry soon?\n"
+            "• add milk\n"
+            "• bought milk\n"
+            "• show shopping list\n\n"
             "/lang pl — change language"
         ),
     },
@@ -104,6 +112,11 @@ MESSAGES: dict[str, dict[str, str]] = {
         "discarded": "Oznaczono jako wyrzucone 🗑",
         "snoozed": "Odłożono ⏰",
         "added_to_list": "Dodano do listy zakupów 🛒",
+        "list_added": "Dodano: {items}",
+        "list_bought": "Kupione: {name} ✓",
+        "list_empty": "Lista zakupów jest pusta",
+        "list_contents": "Lista zakupów:",
+        "nav_shopping": "Zakupy",
         "list_title": "Domowa apteczka",
         "empty_cabinet": "Twoja apteczka jest pusta. Dodaj pierwszy lek!",
         "no_expiry": "Brak daty ważności",
@@ -149,7 +162,10 @@ MESSAGES: dict[str, dict[str, str]] = {
             "• otworzyłem aspirynę\n"
             "• ile zostało ibuprofenu?\n"
             "• boli mnie głowa — coś masz?\n"
-            "• co wkrótce traci ważność?\n\n"
+            "• co wkrótce traci ważność?\n"
+            "• dodaj mleko\n"
+            "• kupiłem mleko\n"
+            "• pokaż listę zakupów\n\n"
             "/lang pl — zmiana języka"
         ),
     },
@@ -176,6 +192,11 @@ MESSAGES: dict[str, dict[str, str]] = {
         "discarded": "Помечено как выброшенное 🗑",
         "snoozed": "Отложено ⏰",
         "added_to_list": "Добавлено в список покупок 🛒",
+        "list_added": "Добавлено: {items}",
+        "list_bought": "Куплено: {name} ✓",
+        "list_empty": "Список покупок пуст",
+        "list_contents": "Список покупок:",
+        "nav_shopping": "Покупки",
         "list_title": "Домашняя аптечка",
         "empty_cabinet": "Ваша аптечка пуста. Добавьте первое лекарство!",
         "no_expiry": "Срок годности не указан",
@@ -221,7 +242,10 @@ MESSAGES: dict[str, dict[str, str]] = {
             "• открыл аспирин\n"
             "• сколько осталось ибупрофена?\n"
             "• у меня болит голова — что есть?\n"
-            "• что скоро истекает?\n\n"
+            "• что скоро истекает?\n"
+            "• добавь молоко\n"
+            "• купил молоко\n"
+            "• покажи список покупок\n\n"
             "/lang ru — сменить язык"
         ),
     },
@@ -248,6 +272,11 @@ MESSAGES: dict[str, dict[str, str]] = {
         "discarded": "Позначено як викинуте 🗑",
         "snoozed": "Відкладено ⏰",
         "added_to_list": "Додано до списку покупок 🛒",
+        "list_added": "Додано: {items}",
+        "list_bought": "Куплено: {name} ✓",
+        "list_empty": "Список покупок порожній",
+        "list_contents": "Список покупок:",
+        "nav_shopping": "Покупки",
         "list_title": "Домашня аптечка",
         "empty_cabinet": "Ваша аптечка порожня. Додайте перші ліки!",
         "no_expiry": "Термін придатності не вказано",
@@ -293,7 +322,10 @@ MESSAGES: dict[str, dict[str, str]] = {
             "• відкрив аспірин\n"
             "• скільки залишилось ібупрофену?\n"
             "• у мене болить голова — щось є?\n"
-            "• що скоро спливає?\n\n"
+            "• що скоро спливає?\n"
+            "• додай молоко\n"
+            "• купив молоко\n"
+            "• покажи список покупок\n\n"
             "/lang uk — змінити мову"
         ),
     },
