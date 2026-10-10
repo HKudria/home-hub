@@ -26,11 +26,11 @@
   <dl>
     <dt>{{ T('form_expiry') }}</dt>
     <dd>
-      {% if m.expiry_date %}{{ m.expiry_date }}{% else %}{{ T('no_expiry') }}{% endif %}
+      {% if m.expiry_date %}{{ m.expiry_date|shortdate }}{% else %}{{ T('no_expiry') }}{% endif %}
     </dd>
     {% if m.opened_at %}
     <dt>{{ T('detail_opened') }}</dt>
-    <dd>{{ m.opened_at }}</dd>
+    <dd>{{ m.opened_at|shortdate }}</dd>
     {% endif %}
     {% if discard_date %}
     <dt>{{ T('detail_discard_after') }}</dt>

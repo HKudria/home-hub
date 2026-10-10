@@ -21,6 +21,21 @@ from app.services.task_service import TaskService
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 templates.env.globals["LANGS"] = LANGS
 
+
+def _shortdate(value):
+    """2027-03 -> 03/2027, 2027-03-15 -> 15/03/2027, otherwise the raw value."""
+    if not value:
+        return value
+    parts = str(value).split("-")
+    if len(parts) == 2 and len(parts[0]) == 4:
+        return f"{parts[1]}/{parts[0]}"
+    if len(parts) == 3 and len(parts[0]) == 4:
+        return f"{parts[2]}/{parts[1]}/{parts[0]}"
+    return value
+
+
+templates.env.filters["shortdate"] = _shortdate
+
 MAX_IMAGES = 2
 MAX_IMAGE_BYTES = 8 * 1024 * 1024
 
@@ -385,7 +400,7 @@ def build_web_router(services, conn, default_lang: str = "en", data_dir: str = "
         if _svc().get(medicine_id) is None:
             raise HTTPException(status_code=404, detail="Medicine not found")
         _svc().discard(medicine_id, "web")
-        return RedirectResponse(f"/medicine/{medicine_id}", status_code=303)
+        return RedirectResponse("/", status_code=303)
 
     @router.post("/medicine/{medicine_id}/reread")
     async def reread(medicine_id: int):

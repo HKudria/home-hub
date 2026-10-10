@@ -65,8 +65,9 @@ class MedicineService:
         self.conn.commit()
 
     def discard(self, medicine_id: int, actor: str):
-        self.update(medicine_id, {"quantity": 0})
-        self._event(medicine_id, actor, 0, "discarded")
+        # Events must go first (immediate FK enforcement), then the medicine.
+        self.conn.execute("DELETE FROM events WHERE medicine_id=?", (medicine_id,))
+        self.conn.execute("DELETE FROM medicines WHERE id=?", (medicine_id,))
         self.conn.commit()
 
     def recent_events(self, limit: int = 20):

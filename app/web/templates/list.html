@@ -39,7 +39,7 @@
     <a class="row-title" href="/medicine/{{ m.id }}">{{ badge(m) }}{{ m.name }}</a>
     <p class="row-meta">{{ m.quantity }} {{ m.unit }}</p>
     <p class="row-meta expiry">
-      {% if m.expiry_date %}{{ m.expiry_date }} ({{ m.days_until }}){% else %}{{ T('no_expiry') }}{% endif %}
+      {% if m.expiry_date %}{{ m.expiry_date|shortdate }} ({{ m.days_until }}){% else %}{{ T('no_expiry') }}{% endif %}
     </p>
   </li>
   {% endfor %}
@@ -54,7 +54,7 @@
     <a class="row-title" href="/medicine/{{ m.id }}">{{ badge(m) }}{{ m.name }}</a>
     <p class="row-meta">{{ m.quantity }} {{ m.unit }}</p>
     <p class="row-meta expiry">
-      {% if m.expiry_date %}{{ m.expiry_date }}{% else %}{{ T('no_expiry') }}{% endif %}
+      {% if m.expiry_date %}{{ m.expiry_date|shortdate }}{% else %}{{ T('no_expiry') }}{% endif %}
     </p>
   </li>
   {% endfor %}

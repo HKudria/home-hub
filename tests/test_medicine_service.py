@@ -59,7 +59,10 @@ class MedicineServiceTest(unittest.TestCase):
         svc.mark_opened(mid, "2026-10-06", "herman")
         self.assertEqual(svc.get(mid)["opened_at"], "2026-10-06")
         svc.discard(mid, "herman")
-        self.assertEqual(svc.get(mid)["quantity"], 0)
+        self.assertIsNone(svc.get(mid))
+        c = conn.execute(
+            "SELECT COUNT(*) c FROM events WHERE medicine_id=?", (mid,)).fetchone()["c"]
+        self.assertEqual(c, 0)
 
     def test_update_snooze_fields(self):
         svc, _ = self.make_svc()
