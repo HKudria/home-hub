@@ -17,6 +17,7 @@ class MedicineService:
         fields = {k: v for k, v in fields.items() if k in COLUMNS}
         # CREATE TABLE IF NOT EXISTS won't change an existing DB's column
         # default, so set the code-level default (0 = alerts off) explicitly.
+        fields.setdefault("quantity", 1)
         fields.setdefault("low_stock_threshold", 0)
         fields.setdefault("ai_status", "ok")
         cols = ", ".join(fields)

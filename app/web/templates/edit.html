@@ -26,7 +26,7 @@
 
   <label>
     <span>{{ T('form_quantity') }}</span>
-    <input type="number" name="quantity" step="any" min="0" value="{{ values.get('quantity', '') }}">
+    <input type="number" name="quantity" step="any" min="0" value="{{ '%g'|format(values.get('quantity', 0)|float) }}">
   </label>
   <label>
     <span>{{ T('form_unit') }}</span>
@@ -38,7 +38,7 @@
   </label>
   <label>
     <span>{{ T('form_threshold') }}</span>
-    <input type="number" name="low_stock_threshold" step="1" min="0" value="{{ values.get('low_stock_threshold', '3') }}">
+    <input type="number" name="low_stock_threshold" step="1" min="0" value="{{ '%g'|format(values.get('low_stock_threshold', 0)|float) }}">
   </label>
   <label>
     <span>{{ T('form_discard_after') }} ({{ T('optional') }})</span>

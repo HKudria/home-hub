@@ -23,7 +23,7 @@ class TestDb(unittest.TestCase):
         conn.execute(
             "INSERT INTO medicines (name) VALUES (?)", ("Test",))
         row = conn.execute("SELECT * FROM medicines").fetchone()
-        self.assertEqual(row["quantity"], 0)
+        self.assertEqual(row["quantity"], 1)
         self.assertEqual(row["low_stock_threshold"], 0)
         self.assertEqual(row["ai_status"], "needs_ai_data")
         self.assertEqual(row["unit"], "pieces")

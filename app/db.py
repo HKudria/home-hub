@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS medicines (
   expiry_date TEXT,
   opened_at TEXT,
   discard_after_days INTEGER,
-  quantity REAL NOT NULL DEFAULT 0,
+  quantity REAL NOT NULL DEFAULT 1,
   unit TEXT NOT NULL DEFAULT 'pieces',
   low_stock_threshold REAL NOT NULL DEFAULT 0,
   photo_path TEXT,
