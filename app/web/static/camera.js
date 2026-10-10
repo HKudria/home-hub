@@ -126,6 +126,7 @@
   if (fillAiBtn) {
     var fillAiLabel = fillAiBtn.textContent;
     var fillAiErr = document.getElementById("fill-ai-error");
+    var fillAiLoading = document.getElementById("fill-ai-loading");
     fillAiBtn.addEventListener("click", function () {
       var nameInput = document.querySelector('[name="name"]');
       var name = (nameInput && nameInput.value || "").trim();
@@ -133,6 +134,7 @@
       fillAiBtn.disabled = true;
       fillAiBtn.textContent = "…";
       if (fillAiErr) fillAiErr.classList.add("hidden");
+      if (fillAiLoading) fillAiLoading.classList.remove("hidden");
       (async function () {
         try {
           var fd = new FormData();
@@ -152,6 +154,7 @@
         } catch (e) {
           if (fillAiErr) fillAiErr.classList.remove("hidden");
         } finally {
+          if (fillAiLoading) fillAiLoading.classList.add("hidden");
           fillAiBtn.disabled = false;
           fillAiBtn.textContent = fillAiLabel;
         }
