@@ -15,7 +15,7 @@ from app.ai.interpret import Intent
 # Longest-first so multi-word verbs win over their prefixes.
 TAKE_VERBS = [
     "wziąłem", "wzięłam", "wzięłem", "przyjąłem", "przyjęłam", "brałem",
-    "brałam", "pobrałem", "pobrałam", "took", "take", "had",
+    "brałam", "pobrałem", "pobrałam", "pobralem", "pobralam", "took", "take", "had",
     "принял", "приняла", "выпил", "выпила", "попил", "взял", "взяла",
     "узяв", "узяла", "прийняв", "прийняла", "випив", "випила",
 ]
