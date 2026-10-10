@@ -100,7 +100,7 @@ def _parse_expiry(raw: str) -> str | None:
             return raw
         except ValueError:
             return None
-    m = re.fullmatch(r"(\d{1,2})[./](\d{4})", raw)  # MM/YYYY or MM.YYYY
+    m = re.fullmatch(r"(\d{1,2})[.,/](\d{4})", raw)  # MM/YYYY, MM.YYYY or MM,YYYY
     if m:
         month, year = int(m[1]), int(m[2])
     else:

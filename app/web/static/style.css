@@ -353,10 +353,18 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 }
 .add-form label.check-line {
   display: flex;
+  justify-content: flex-start;
   align-items: center;
   gap: 8px;
   font-size: 14px;
   color: var(--muted);
+}
+.add-form label.check-line input[type="checkbox"] {
+  width: auto;
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  accent-color: var(--pine);
 }
 .add-form input.error, .add-form input.error:focus-visible {
   border-color: var(--berry);
