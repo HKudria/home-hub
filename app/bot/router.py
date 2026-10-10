@@ -130,7 +130,7 @@ def symptom_matches(conn: sqlite3.Connection, terms: list, limit: int = 3) -> li
             r["description_uk"], r["description_en"]))).lower()
         words = _word_tokens(text)
         best_ratio = 0.0
-        total_matched, specific = 0, False
+        best_matched, specific = 0, False
         for g, g_weight in zip(groups, weights):
             matched = 0
             for tk in g:
@@ -140,10 +140,16 @@ def symptom_matches(conn: sqlite3.Connection, terms: list, limit: int = 3) -> li
                     matched += len(tk)
                     if len(tk) >= 5 or hit == tk:
                         specific = True
-            total_matched += matched
-            best_ratio = max(best_ratio, matched / g_weight)
+            # Rank by the BEST single term group, not the sum over groups:
+            # summing favours medicines whose descriptions happen to echo
+            # several language variants of the symptom over medicines that
+            # match one language perfectly.
+            if matched / g_weight > best_ratio or (
+                    matched / g_weight == best_ratio and matched > best_matched):
+                best_ratio = matched / g_weight
+                best_matched = matched
         if best_ratio >= 0.6 and specific:
-            scored.append((best_ratio, total_matched, r["id"], r))
+            scored.append((best_ratio, best_matched, r["id"], r))
     scored.sort(key=lambda s: (-s[0], -s[1], s[2]))
     return [r for _, _, _, r in scored[:limit]]
 

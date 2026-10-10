@@ -43,6 +43,24 @@ from app.bot.router import (match_medicines, symptom_matches, describe_matches,
 
 
 class BotLogicTest(unittest.TestCase):
+    def test_multilang_terms_dont_bury_perfect_match(self):
+        """A medicine matching one term group perfectly (PL-only description)
+        must not be ranked below competitors that match several translated
+        variants — Tantum Verde regression."""
+        conn = init_db(":memory:")
+        svc = MedicineService(conn)
+        svc.add({"name": "neo-angin",
+                 "description_pl": "Lek w bólu gardła i stanach zapalnych jamy ustnej.",
+                 "description_en": "For sore throat and mouth inflammation."})
+        svc.add({"name": "Tantum Verde aerozol",
+                 "description_pl": "Lek stosowany miejscowo w bólu i stanach zapalnych jamy ustnej i gardła."})
+        terms = ["sore throat", "ból gardła", "zapalenie gardła", "ból w gardle"]
+        rows = symptom_matches(conn, terms)
+        names = [r["name"] for r in rows]
+        self.assertIn("Tantum Verde aerozol", names)
+        self.assertLessEqual(names.index("Tantum Verde aerozol"), 2)
+
+class BotLogicTest(unittest.TestCase):
 
     def make(self, name_a="Paracetamol 500", name_b="Paracetamol kids"):
         tmp = tempfile.TemporaryDirectory()
