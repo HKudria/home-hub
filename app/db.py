@@ -72,7 +72,14 @@ def init_db(db_path: str) -> sqlite3.Connection:
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
     conn.executescript(SCHEMA)
-    conn.commit()
+    # Migration for DBs created before the kb_sent column existed: the reply
+    # keyboard rides on replies, so users approved before that feature never
+    # received one. kb_sent=0 lets the router deliver it proactively once.
+    try:
+        conn.execute("ALTER TABLE allowed_users ADD COLUMN kb_sent INTEGER NOT NULL DEFAULT 0")
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass  # column already exists
     return conn
 
 def get_conn(db_path: str) -> sqlite3.Connection:

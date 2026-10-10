@@ -60,6 +60,7 @@ MESSAGES: dict[str, dict[str, str]] = {
         "kb_tasks": "☑ Tasks",
         "kb_expiring": "⏰ Expiring soon?",
         "kb_language": "🌐 Language",
+        "kb_help": "❓ Help",
         "search_placeholder": "Search...",
         "expiry_required": "Expiry date is required.",
         "no_expiry_checkbox": "This item has no expiry date",
@@ -136,6 +137,7 @@ MESSAGES: dict[str, dict[str, str]] = {
             "• show tasks\n\n"
             "/lang pl — change language"
         ),
+        "menu_hint": "Here are quick buttons — you can also just write to me:",
     },
     "pl": {
         "app_name": "Apteczka",
@@ -188,6 +190,7 @@ MESSAGES: dict[str, dict[str, str]] = {
         "kb_tasks": "☑ Zadania",
         "kb_expiring": "⏰ Co się kończy?",
         "kb_language": "🌐 Język",
+        "kb_help": "❓ Pomoc",
         "search_placeholder": "Szukaj...",
         "expiry_required": "Data ważności jest wymagana.",
         "no_expiry_checkbox": "Ten produkt nie ma daty ważności",
@@ -264,6 +267,7 @@ MESSAGES: dict[str, dict[str, str]] = {
             "• pokaż zadania\n\n"
             "/lang pl — zmiana języka"
         ),
+        "menu_hint": "Oto szybkie przyciski — możesz też po prostu pisać:",
     },
     "ru": {
         "app_name": "Аптечка",
@@ -316,6 +320,7 @@ MESSAGES: dict[str, dict[str, str]] = {
         "kb_tasks": "☑ Задачи",
         "kb_expiring": "⏰ Что истекает?",
         "kb_language": "🌐 Язык",
+        "kb_help": "❓ Помощь",
         "search_placeholder": "Поиск...",
         "expiry_required": "Укажите срок годности.",
         "no_expiry_checkbox": "У этого средства нет срока годности",
@@ -392,6 +397,7 @@ MESSAGES: dict[str, dict[str, str]] = {
             "• покажи задачи\n\n"
             "/lang ru — сменить язык"
         ),
+        "menu_hint": "Вот быстрые кнопки — можно также просто писать мне:",
     },
     "uk": {
         "app_name": "Аптечка",
@@ -444,6 +450,7 @@ MESSAGES: dict[str, dict[str, str]] = {
         "kb_tasks": "☑ Завдання",
         "kb_expiring": "⏰ Що скоро спливає?",
         "kb_language": "🌐 Мова",
+        "kb_help": "❓ Допомога",
         "search_placeholder": "Пошук...",
         "expiry_required": "Вкажіть термін придатності.",
         "no_expiry_checkbox": "Цей засіб не має терміну придатності",
@@ -520,6 +527,7 @@ MESSAGES: dict[str, dict[str, str]] = {
             "• покажи завдання\n\n"
             "/lang uk — змінити мову"
         ),
+        "menu_hint": "Ось швидкі кнопки — можна також просто писати мені:",
     },
 }
 

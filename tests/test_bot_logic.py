@@ -206,13 +206,36 @@ class BotLogicTest(unittest.TestCase):
         # Button text in one language must not match another language.
         self.assertIsNone(match_template("🛒 Shopping list", "pl"))
 
+    def test_match_template_help(self):
+        from app.i18n import t
+        self.assertEqual(match_template("❓ Help", "en"), "help")
+        # The pl button text is read from the catalog, not hardcoded.
+        self.assertEqual(match_template(t("pl", "kb_help"), "pl"), "help")
+        # Other languages too.
+        for code in ("ru", "uk"):
+            self.assertEqual(match_template(t(code, "kb_help"), code), "help")
+        # Help text must not collide with an unrelated message.
+        self.assertIsNone(match_template("help me with paracetamol", "en"))
+
     def test_main_keyboard_layout(self):
         kb = main_keyboard("en")
         self.assertTrue(kb.resize_keyboard)
         self.assertTrue(kb.is_persistent)
         self.assertEqual([btn.text for row in kb.keyboard for btn in row],
                          ["🛒 Shopping list", "☑ Tasks",
-                          "⏰ Expiring soon?", "🌐 Language"])
+                          "⏰ Expiring soon?", "🌐 Language", "❓ Help"])
+
+    def test_kb_sent_migration(self):
+        """init_db on a fresh DB must add the kb_sent column so the router's
+        proactive-keyboard check works on databases created before it."""
+        conn = init_db(os.path.join(self.tmpdir(), "mig.db"))
+        conn.execute(
+            "INSERT INTO allowed_users (telegram_id, name, role) VALUES (1, 'T', 'member')")
+        conn.commit()
+        row = conn.execute(
+            "SELECT telegram_id, kb_sent FROM allowed_users WHERE telegram_id=1"
+        ).fetchone()
+        self.assertEqual(row["kb_sent"], 0)
 
     def test_fuzzy_matches_typo(self):
         conn, svc, a, b = self.make(

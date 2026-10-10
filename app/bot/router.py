@@ -244,12 +244,13 @@ TEMPLATE_BUTTONS: tuple[tuple[str, str], ...] = (
     ("kb_tasks", "showtasks"),
     ("kb_expiring", "expiring"),
     ("kb_language", "language"),
+    ("kb_help", "help"),
 )
 
 
 def match_template(text: str, lang: str) -> str | None:
-    """Return 'showlist' | 'showtasks' | 'expiring' | 'language' when text equals
-    the localized template button text for lang, else None."""
+    """Return 'showlist' | 'showtasks' | 'expiring' | 'language' | 'help' when
+    text equals the localized template button text for lang, else None."""
     stripped = text.strip()
     for key, action in TEMPLATE_BUTTONS:
         if stripped == t(lang, key):
@@ -265,10 +266,16 @@ def main_keyboard(lang: str) -> ReplyKeyboardMarkup:
              KeyboardButton(text=t(lang, "kb_tasks"))],
             [KeyboardButton(text=t(lang, "kb_expiring")),
              KeyboardButton(text=t(lang, "kb_language"))],
+            [KeyboardButton(text=t(lang, "kb_help"))],
         ],
         resize_keyboard=True,
         is_persistent=True,
     )
+
+
+def help_text_for(lang: str) -> str:
+    """Body of the /help command and of the ❓ Help template button."""
+    return t(lang, "help_text")
 
 
 async def symptom_terms(settings: Settings, symptom: str) -> list:
@@ -401,6 +408,29 @@ def build_router(conn: sqlite3.Connection, settings: Settings,
             await message.reply("\n".join(lines),
                                 reply_markup=main_keyboard(lang))
 
+    async def ensure_keyboard(message: Message, tg_id: int, lang: str):
+        """Deliver the reply keyboard proactively, once per user.
+
+        Users approved before the keyboard existed never hit a reply path
+        that attached it, so the kb_sent flag makes delivery deterministic:
+        the first free-text message after the migration gets a short hint
+        with the keyboard, then the flag flips to 1. Failures must never
+        block the handler (and leave the flag unset so it retries).
+        """
+        row = conn.execute(
+            "SELECT kb_sent FROM allowed_users WHERE telegram_id=?",
+            (tg_id,)).fetchone()
+        if row is None or row["kb_sent"]:
+            return  # admin without an allowed_users row: replies carry the kb anyway
+        try:
+            await message.answer(t(lang, "menu_hint"),
+                                 reply_markup=main_keyboard(lang))
+        except Exception:
+            return
+        conn.execute("UPDATE allowed_users SET kb_sent=1 WHERE telegram_id=?",
+                     (tg_id,))
+        conn.commit()
+
     @router.message(Command("start"))
     async def cmd_start(message: Message, bot: Bot):
         tg_id = message.from_user.id
@@ -408,6 +438,10 @@ def build_router(conn: sqlite3.Connection, settings: Settings,
         if is_admin(settings, tg_id) or is_allowed(conn, tg_id):
             await message.reply(t(lang, "approved"),
                                 reply_markup=main_keyboard(lang))
+            # /start itself delivers the keyboard — no hint needed.
+            conn.execute("UPDATE allowed_users SET kb_sent=1 WHERE telegram_id=?",
+                         (tg_id,))
+            conn.commit()
         else:
             await request_approval(conn, settings, bot, tg_id, actor_name(message.from_user))
             await message.reply(t(lang, "ask_admin"))
@@ -422,7 +456,7 @@ def build_router(conn: sqlite3.Connection, settings: Settings,
             await message.reply(t(DEFAULT_LANG, "ask_admin"))
             return
         lang = get_user_lang(conn, tg_id)
-        await message.reply(t(lang, "help_text"))
+        await message.reply(help_text_for(lang))
 
     @router.message(Command("lang"))
     async def cmd_lang(message: Message):
@@ -450,9 +484,20 @@ def build_router(conn: sqlite3.Connection, settings: Settings,
         lang = get_user_lang(conn, tg_id)
         text = message.text or ""
 
+        # Proactive keyboard delivery: users approved before the reply
+        # keyboard existed never got one. Sent BEFORE the reply so the
+        # keyboard is visible with the very first interaction.
+        await ensure_keyboard(message, tg_id, lang)
+
         # Template button presses short-circuit before the AI interpreter
         # (instant and free), still behind the approval gate above.
         tpl = match_template(text, lang)
+        if tpl == "help":
+            # Same body as /help; this handler already sits behind the same
+            # approved-user gate.
+            await message.reply(help_text_for(lang),
+                                reply_markup=main_keyboard(lang))
+            return
         if tpl == "showlist":
             svc_shop = services.get("shopping") or ShoppingService(conn)
             rows = svc_shop.list_unbought()
