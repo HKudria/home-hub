@@ -78,6 +78,38 @@ class BotLogicTest(unittest.TestCase):
         rows = symptom_matches(conn, ["stan zapalny gardła"])
         self.assertEqual(rows[0]["id"], c)
 
+    def test_symptom_weighted_cabinet(self):
+        """Replica of a real user's cabinet: short generic tokens ("ból",
+        "stan") must not pull in unrelated medicines."""
+        conn, svc, _, _ = self.make()
+        med1 = svc.add({"name": "Tantum Verde aerozol", "quantity": 1,
+                        "description_pl": "Lek stosowany miejscowo w bólu i "
+                                          "stanach zapalnych jamy ustnej i gardła."})
+        med2 = svc.add({"name": "neo-angin", "quantity": 1,
+                        "description_pl": "Lek w bólu gardła i stanach "
+                                          "zapalnych jamy ustnej."})
+        med3 = svc.add({"name": "Maść ichtiolowa", "quantity": 1,
+                        "description_pl": "Stosowana w stanach zapalnych skóry."})
+        med4 = svc.add({"name": "Tobradex", "quantity": 1,
+                        "description_en": "Eye drops for eye inflammation."})
+        med5 = svc.add({"name": "Paracetamol", "quantity": 1,
+                        "description_en": "Pain relief."})
+        rows = [r["id"] for r in symptom_matches(conn, ["ból gardła"])]
+        self.assertEqual(rows, [med1, med2])
+        self.assertNotIn(med3, rows)   # throat token missing -> below 60 %
+        self.assertNotIn(med4, rows)
+        self.assertNotIn(med5, rows)   # only short generic tokens would hit
+        rows = [r["id"] for r in symptom_matches(conn, ["stan zapalny gardła"])]
+        self.assertEqual(rows, [med1, med2, med3])  # med1/med2 ratio 1.0 first
+        self.assertNotIn(med4, rows)
+        self.assertNotIn(med5, rows)
+        # limit param caps the result count.
+        self.assertEqual(len(symptom_matches(conn, ["stan zapalny gardła"],
+                                             limit=2)), 2)
+        # Single-string signature still accepted.
+        self.assertEqual([r["id"] for r in symptom_matches(conn, "ból gardła")],
+                         [med1, med2])
+
     def test_symptom_no_match(self):
         conn, svc, a, b = self.make()
         self.assertEqual(symptom_matches(conn, ["totally unrelated xyz"]), [])

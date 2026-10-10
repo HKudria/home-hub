@@ -90,28 +90,38 @@ def _word_tokens(text: str) -> list:
     return [w for w in re.findall(r"[^\W\d_]+", text.lower()) if len(w) >= 4]
 
 
-def symptom_matches(conn: sqlite3.Connection, terms: list) -> list:
-    """Tokenized symptom search over name + ingredient + all descriptions.
+def symptom_matches(conn: sqlite3.Connection, terms: list, limit: int = 3) -> list:
+    """Weighted tokenized symptom search over name + ingredient + descriptions.
 
     `terms` is a list of symptom phrases (e.g. from the AI translator, so
-    possibly PL/RU/UK). Every phrase is split into lowercase word tokens
-    (len >= 4); each medicine's combined text scores one point per token T
-    for which some word W satisfies W.startswith(T) or T.startswith(W) —
-    so "gardła" matches "gardła" and "stan" matches "stanach". Rows with
-    score > 0 are returned, best score first. The old single-string
-    signature is still accepted for convenience.
+    possibly PL/RU/). Every phrase — plus its SYMPTOM_SYNONYMS expansions,
+    each kept as a separate token group so a synonym in another language
+    does not dilute the score — is split into lowercase word tokens
+    (len >= 4). A token T scores against a medicine when some word W of its
+    combined text satisfies W.startswith(T) or T.startswith(W) (so "gardła"
+    matches "gardła", "stan" matches "stanach"). Token weight is its length.
+
+    A medicine is included only when, for at least one token group, the
+    matched weight reaches 60% of that group's total weight AND at least one
+    matched token is "specific": len >= 5, or an exact whole-word match
+    (so "gardła"/"zapalny" qualify; a lone 4-char generic like "stan" or an
+    exact "pain" synonym hit does not block inclusion). Rows are ranked by
+    best ratio, then total matched weight, then id, and limited to `limit`.
+    The old single-string signature is still accepted for convenience.
     """
     if isinstance(terms, str):
         terms = [terms]
-    q_tokens: set[str] = set()
+    groups: list[list[str]] = []
     for term in terms:
         if not term:
             continue
-        q_tokens.update(_word_tokens(term))
+        groups.append(_word_tokens(term))
         for syn in SYMPTOM_SYNONYMS.get(term.lower().strip(), []):
-            q_tokens.update(_word_tokens(syn))
-    if not q_tokens:
+            groups.append(_word_tokens(syn))
+    groups = [g for g in groups if g]
+    if not groups:
         return []
+    weights = [sum(len(t) for t in g) for g in groups]
     scored = []
     for r in conn.execute("SELECT * FROM medicines").fetchall():
         text = " ".join(filter(None, (
@@ -119,12 +129,23 @@ def symptom_matches(conn: sqlite3.Connection, terms: list) -> list:
             r["description_pl"], r["description_ru"],
             r["description_uk"], r["description_en"]))).lower()
         words = _word_tokens(text)
-        score = sum(1 for tk in q_tokens
-                    if any(w.startswith(tk) or tk.startswith(w) for w in words))
-        if score > 0:
-            scored.append((score, r["id"], r))
-    scored.sort(key=lambda s: (-s[0], s[1]))
-    return [r for _, _, r in scored]
+        best_ratio = 0.0
+        total_matched, specific = 0, False
+        for g, g_weight in zip(groups, weights):
+            matched = 0
+            for tk in g:
+                hit = next((w for w in words
+                            if w.startswith(tk) or tk.startswith(w)), None)
+                if hit is not None:
+                    matched += len(tk)
+                    if len(tk) >= 5 or hit == tk:
+                        specific = True
+            total_matched += matched
+            best_ratio = max(best_ratio, matched / g_weight)
+        if best_ratio >= 0.6 and specific:
+            scored.append((best_ratio, total_matched, r["id"], r))
+    scored.sort(key=lambda s: (-s[0], -s[1], s[2]))
+    return [r for _, _, _, r in scored[:limit]]
 
 
 def describe_matches(rows, lang: str) -> str:
