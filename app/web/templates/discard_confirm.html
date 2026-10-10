@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+<h2 class="page-title">{{ T('discard_ask', name=m.name) }}</h2>
+
+<section class="card">
+  <form method="post" action="/medicine/{{ m.id }}/discard" class="action-form">
+    <input type="hidden" name="addlist" value="1">
+    <button type="submit" class="btn btn-solid">{{ T('discard_add') }}</button>
+  </form>
+
+  <form method="post" action="/medicine/{{ m.id }}/discard" class="action-form">
+    <input type="hidden" name="only" value="1">
+    <button type="submit" class="btn btn-danger">{{ T('discard_only') }}</button>
+  </form>
+
+  <a href="/medicine/{{ m.id }}" class="btn btn-secondary">{{ T('dup_cancel') }}</a>
+</section>
+{% endblock %}

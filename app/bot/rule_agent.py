@@ -31,7 +31,8 @@ ADDLIST_VERBS = ["add", "dodaj", "додай", "добавь", "добавити
 QTY_PREFIXES = ["how much", "ile", "сколько", "скільки"]
 
 _SYMPTOM = re.compile(
-    r"\b(boli|bole|głowa|glowa|headache|болит|болить|боліть)\b")
+    r"\b(boli|bole|bólu|boł|głowa|glowa|headache|gardl\w*|zapaln\w*|bol"
+    r"|болит|болить|боліть)\b")
 _GREETINGS = {"hello", "hi", "hey", "cześć", "dzień dobry", "привет",
               "добрый день", "вітання"}
 

@@ -85,21 +85,46 @@ def fuzzy_matches(conn: sqlite3.Connection, query: str, table: str = "medicines"
     return [r for _, _, r in scored[:limit]]
 
 
-def _like_all(conn: sqlite3.Connection, term: str) -> list:
-    q = f"%{term.lower()}%"
-    return conn.execute(
-        "SELECT * FROM medicines WHERE lower(name) LIKE ? OR lower(active_ingredient) LIKE ? "
-        "OR lower(description_en) LIKE ? OR lower(description_pl) LIKE ? "
-        "OR lower(description_ru) LIKE ? OR lower(description_uk) LIKE ?",
-        (q, q, q, q, q, q)).fetchall()
+def _word_tokens(text: str) -> list:
+    """Lowercase word tokens (letters only, len >= 4) of `text`."""
+    return [w for w in re.findall(r"[^\W\d_]+", text.lower()) if len(w) >= 4]
 
 
-def symptom_matches(conn: sqlite3.Connection, symptom: str) -> list:
-    rows = {r["id"]: r for r in _like_all(conn, symptom)}
-    for term in SYMPTOM_SYNONYMS.get(symptom.lower().strip(), []):
-        for r in _like_all(conn, term):
-            rows.setdefault(r["id"], r)
-    return [rows[k] for k in sorted(rows)]
+def symptom_matches(conn: sqlite3.Connection, terms: list) -> list:
+    """Tokenized symptom search over name + ingredient + all descriptions.
+
+    `terms` is a list of symptom phrases (e.g. from the AI translator, so
+    possibly PL/RU/UK). Every phrase is split into lowercase word tokens
+    (len >= 4); each medicine's combined text scores one point per token T
+    for which some word W satisfies W.startswith(T) or T.startswith(W) —
+    so "gardła" matches "gardła" and "stan" matches "stanach". Rows with
+    score > 0 are returned, best score first. The old single-string
+    signature is still accepted for convenience.
+    """
+    if isinstance(terms, str):
+        terms = [terms]
+    q_tokens: set[str] = set()
+    for term in terms:
+        if not term:
+            continue
+        q_tokens.update(_word_tokens(term))
+        for syn in SYMPTOM_SYNONYMS.get(term.lower().strip(), []):
+            q_tokens.update(_word_tokens(syn))
+    if not q_tokens:
+        return []
+    scored = []
+    for r in conn.execute("SELECT * FROM medicines").fetchall():
+        text = " ".join(filter(None, (
+            r["name"], r["active_ingredient"],
+            r["description_pl"], r["description_ru"],
+            r["description_uk"], r["description_en"]))).lower()
+        words = _word_tokens(text)
+        score = sum(1 for tk in q_tokens
+                    if any(w.startswith(tk) or tk.startswith(w) for w in words))
+        if score > 0:
+            scored.append((score, r["id"], r))
+    scored.sort(key=lambda s: (-s[0], s[1]))
+    return [r for _, _, r in scored]
 
 
 def describe_matches(rows, lang: str) -> str:
@@ -262,14 +287,15 @@ def build_router(conn: sqlite3.Connection, settings: Settings,
     async def do_action(message: Message, tg_id: int, actor: str, action: str,
                         med_id: int, amount: float):
         lang = get_user_lang(conn, tg_id)
+        kb = main_keyboard(lang)
         row = svc.get(med_id)
         if row is None:
-            await message.reply(t(lang, "no_match"))
+            await message.reply(t(lang, "no_match"), reply_markup=kb)
             return
         if action == "take":
             row = svc.take_dose(med_id, amount, actor)
             if row is None:
-                await message.reply(t(lang, "no_match"))
+                await message.reply(t(lang, "no_match"), reply_markup=kb)
                 return
             if row["quantity"] <= row["low_stock_threshold"]:
                 # Only mark notified when the admin took the dose themselves;
@@ -280,33 +306,39 @@ def build_router(conn: sqlite3.Connection, settings: Settings,
                                  (med_id,))
                     conn.commit()
             if row["quantity"] == 0:
-                await message.reply(t(lang, "last_dose", name=row["name"]))
+                await message.reply(t(lang, "last_dose", name=row["name"]),
+                                    reply_markup=kb)
             else:
                 await message.reply(t(lang, "took", name=row["name"],
                                       qty=int(row["quantity"]),
-                                      unit=unit_label(lang, row["unit"])))
+                                      unit=unit_label(lang, row["unit"])),
+                                    reply_markup=kb)
         elif action == "opened":
             today = datetime.date.today().isoformat()
             svc.mark_opened(med_id, today, actor)
-            await message.reply(t(lang, "opened_on", name=row["name"], opened=today))
+            await message.reply(t(lang, "opened_on", name=row["name"], opened=today),
+                                reply_markup=kb)
         elif action == "query_qty":
             await message.reply(t(lang, "took", name=row["name"],
                                   qty=int(row["quantity"]),
-                                  unit=unit_label(lang, row["unit"])))
+                                  unit=unit_label(lang, row["unit"])),
+                                reply_markup=kb)
         elif action == "bought":
             svc_shop = services.get("shopping") or ShoppingService(conn)
             item = svc_shop.check_off(str(med_id), actor)
             if item is None:
-                await message.reply(t(lang, "no_match"))
+                await message.reply(t(lang, "no_match"), reply_markup=kb)
             else:
-                await message.reply(t(lang, "list_bought", name=item["name"]))
+                await message.reply(t(lang, "list_bought", name=item["name"]),
+                                    reply_markup=kb)
         elif action == "donetask":
             svc_tasks = services.get("tasks") or TaskService(conn)
             task = svc_tasks.complete(str(med_id), actor)
             if task is None:
-                await message.reply(t(lang, "no_match"))
+                await message.reply(t(lang, "no_match"), reply_markup=kb)
             else:
-                await message.reply(t(lang, "task_done", title=task["title"]))
+                await message.reply(t(lang, "task_done", title=task["title"]),
+                                    reply_markup=kb)
 
     async def reply_pick_buttons(message: Message, rows, amount: float,
                                  key: str = "which_one", label_col: str = "name"):
@@ -331,11 +363,13 @@ def build_router(conn: sqlite3.Connection, settings: Settings,
             if today <= exp <= horizon:
                 soon.append(r)
         if not soon:
-            await message.reply(t(lang, "symptom_none"))
+            await message.reply(t(lang, "symptom_none"),
+                                reply_markup=main_keyboard(lang))
         else:
             lines = [t(lang, "expiring_soon_list")]
             lines += [f"• {r['name']} — {r['expiry_date']}" for r in soon]
-            await message.reply("\n".join(lines))
+            await message.reply("\n".join(lines),
+                                reply_markup=main_keyboard(lang))
 
     @router.message(Command("start"))
     async def cmd_start(message: Message, bot: Bot):
@@ -430,7 +464,8 @@ def build_router(conn: sqlite3.Connection, settings: Settings,
                     await reply_pick_buttons(message, candidates, amount,
                                              key="maybe")
                 else:
-                    await message.reply(t(lang, "no_match"))
+                    await message.reply(t(lang, "no_match"),
+                                        reply_markup=main_keyboard(lang))
             elif len(rows) > 1:
                 PENDING[(message.chat.id, tg_id)] = intent.action
                 await reply_pick_buttons(message, rows, amount)
@@ -448,32 +483,31 @@ def build_router(conn: sqlite3.Connection, settings: Settings,
                 terms += await symptom_terms(settings, symptom)
             except Exception:
                 pass
-            by_id: dict[int, sqlite3.Row] = {}
-            for term in terms:
-                if not term:
-                    continue
-                for r in symptom_matches(conn, term):
-                    by_id.setdefault(r["id"], r)
-            rows = [by_id[k] for k in sorted(by_id)]
+            rows = symptom_matches(conn, [term for term in terms if term])
             if not rows:
-                await message.reply(t(lang, "symptom_none"))
+                await message.reply(t(lang, "symptom_none"),
+                                    reply_markup=main_keyboard(lang))
             else:
                 await message.reply(t(lang, "symptom_found") + "\n"
-                                    + describe_matches_enhanced(rows, lang))
+                                    + describe_matches_enhanced(rows, lang),
+                                    reply_markup=main_keyboard(lang))
 
         elif intent.action == "addlist":
             svc_shop = services.get("shopping") or ShoppingService(conn)
             added = svc_shop.add_items(intent.items, actor_name(message.from_user))
             if added:
-                await message.reply(t(lang, "list_added", items=", ".join(added)))
+                await message.reply(t(lang, "list_added", items=", ".join(added)),
+                                    reply_markup=main_keyboard(lang))
             else:
-                await message.reply(t(lang, "no_match"))
+                await message.reply(t(lang, "no_match"),
+                                    reply_markup=main_keyboard(lang))
 
         elif intent.action == "bought":
             svc_shop = services.get("shopping") or ShoppingService(conn)
             row = svc_shop.check_off(intent.medicine_query, actor_name(message.from_user))
             if row:
-                await message.reply(t(lang, "list_bought", name=row["name"]))
+                await message.reply(t(lang, "list_bought", name=row["name"]),
+                                    reply_markup=main_keyboard(lang))
             else:
                 # No exact match: offer fuzzy candidates (unbought only).
                 candidates = [r for r in fuzzy_matches(
@@ -483,22 +517,25 @@ def build_router(conn: sqlite3.Connection, settings: Settings,
                     PENDING[(message.chat.id, tg_id)] = "bought"
                     await reply_pick_buttons(message, candidates, 1, key="maybe")
                 else:
-                    await message.reply(t(lang, "no_match"))
+                    await message.reply(t(lang, "no_match"),
+                                        reply_markup=main_keyboard(lang))
 
         elif intent.action == "showlist":
             svc_shop = services.get("shopping") or ShoppingService(conn)
             rows = svc_shop.list_unbought()
             body = format_list_contents(rows, lang)
             if body:
-                await message.reply(body)
+                await message.reply(body, reply_markup=main_keyboard(lang))
             else:
-                await message.reply(t(lang, "list_empty"))
+                await message.reply(t(lang, "list_empty"),
+                                    reply_markup=main_keyboard(lang))
 
         elif intent.action == "addtask":
             svc_tasks = services.get("tasks") or TaskService(conn)
             actor = actor_name(message.from_user)
             if not intent.task_title:
-                await message.reply(t(lang, "no_match"))
+                await message.reply(t(lang, "no_match"),
+                                    reply_markup=main_keyboard(lang))
                 return
             assignee_id = None
             assignee_name = None
@@ -517,24 +554,28 @@ def build_router(conn: sqlite3.Connection, settings: Settings,
                                      assignee_id, assignee_name)
             if assignee_id is not None:
                 await message.reply(t(lang, "task_added", title=row["title"])
-                                    + t(lang, "task_assigned_note", who=assignee_name))
+                                    + t(lang, "task_assigned_note", who=assignee_name),
+                                    reply_markup=main_keyboard(lang))
                 try:
                     await bot.send_message(assignee_id, t(
                         get_user_lang(conn, assignee_id), "task_new_dm",
                         who=actor, title=row["title"],
-                        due=(f" {intent.due_date}" if intent.due_date else "")))
+                        due=(f" {intent.due_date}" if intent.due_date else "")),
+                        reply_markup=main_keyboard(get_user_lang(conn, assignee_id)))
                 except Exception:
                     pass  # the task exists; a failed DM must not fail the reply
             else:
                 note = t(lang, "task_unassigned_note", who=intent.assignee) \
                     if intent.assignee else ""
-                await message.reply(t(lang, "task_added", title=row["title"]) + note)
+                await message.reply(t(lang, "task_added", title=row["title"]) + note,
+                                    reply_markup=main_keyboard(lang))
 
         elif intent.action == "donetask":
             svc_tasks = services.get("tasks") or TaskService(conn)
             row = svc_tasks.complete(intent.medicine_query, actor_name(message.from_user))
             if row:
-                await message.reply(t(lang, "task_done", title=row["title"]))
+                await message.reply(t(lang, "task_done", title=row["title"]),
+                                    reply_markup=main_keyboard(lang))
             else:
                 # No exact match: offer fuzzy candidates (open tasks only).
                 candidates = [r for r in fuzzy_matches(
@@ -545,16 +586,18 @@ def build_router(conn: sqlite3.Connection, settings: Settings,
                     await reply_pick_buttons(message, candidates, 1, key="maybe",
                                              label_col="title")
                 else:
-                    await message.reply(t(lang, "no_match"))
+                    await message.reply(t(lang, "no_match"),
+                                        reply_markup=main_keyboard(lang))
 
         elif intent.action == "showtasks":
             svc_tasks = services.get("tasks") or TaskService(conn)
             rows = svc_tasks.list_open()
             body = format_open_tasks(rows, lang, datetime.date.today().isoformat())
             if body:
-                await message.reply(body)
+                await message.reply(body, reply_markup=main_keyboard(lang))
             else:
-                await message.reply(t(lang, "task_empty"))
+                await message.reply(t(lang, "task_empty"),
+                                    reply_markup=main_keyboard(lang))
 
         # unknown: ignore unrecognized chatter
 
@@ -607,7 +650,11 @@ def build_router(conn: sqlite3.Connection, settings: Settings,
                             await query.message.edit_text("✅")
                         except Exception:
                             pass
-                    await bot.send_message(val, t(DEFAULT_LANG, "approved"))
+                    # Approved users get the keyboard right away, even if the
+                    # bot was never /started by them before approval existed.
+                    await bot.send_message(val, t(DEFAULT_LANG, "approved"),
+                                           reply_markup=main_keyboard(
+                                               get_user_lang(conn, val)))
                 else:
                     decline(conn, val)
                     if query.message:
@@ -618,9 +665,42 @@ def build_router(conn: sqlite3.Connection, settings: Settings,
                 return
 
             if action == "discard":
-                svc.discard(val, actor)
-                if query.message:
-                    await query.message.reply(t(lang, "discarded"))
+                # Two-step: ask whether the item should also go on the
+                # shopping list before actually discarding it.
+                med = svc.get(val)
+                if med is None:
+                    if query.message:
+                        await query.message.reply(t(lang, "no_match"))
+                elif query.message:
+                    kb = InlineKeyboardBuilder()
+                    kb.button(text="🛒 " + t(lang, "discard_add"),
+                              callback_data=f"discard_add:{val}")
+                    kb.button(text="🗑 " + t(lang, "discard_only"),
+                              callback_data=f"discard_only:{val}")
+                    await query.message.reply(
+                        t(lang, "discard_ask", name=med["name"]),
+                        reply_markup=kb.as_markup())
+            elif action == "discard_add":
+                med = svc.get(val)
+                if med is None:
+                    if query.message:
+                        await query.message.reply(t(lang, "no_match"))
+                else:
+                    name = med["name"]
+                    svc_shop = services.get("shopping") or ShoppingService(conn)
+                    svc_shop.add_items([name], actor, from_medicine_id=val)
+                    svc.discard(val, actor)
+                    if query.message:
+                        await query.message.reply(t(lang, "discarded") + "\n"
+                                                  + t(lang, "added_to_list"))
+            elif action == "discard_only":
+                if svc.get(val) is None:
+                    if query.message:
+                        await query.message.reply(t(lang, "no_match"))
+                else:
+                    svc.discard(val, actor)
+                    if query.message:
+                        await query.message.reply(t(lang, "discarded"))
             elif action == "snooze_expiry":
                 until = (datetime.date.today()
                          + datetime.timedelta(days=30)).isoformat()

@@ -468,12 +468,23 @@ def build_web_router(services, conn, default_lang: str = "en", data_dir: str = "
         _svc().mark_opened(medicine_id, datetime.date.today().isoformat(), "web")
         return RedirectResponse(f"/medicine/{medicine_id}", status_code=303)
 
-    @router.post("/medicine/{medicine_id}/discard")
-    async def discard(medicine_id: int):
-        if _svc().get(medicine_id) is None:
+    @router.api_route("/medicine/{medicine_id}/discard", methods=["GET", "POST"])
+    async def discard(medicine_id: int, request: Request):
+        row = _svc().get(medicine_id)
+        if row is None:
             raise HTTPException(status_code=404, detail="Medicine not found")
-        _svc().discard(medicine_id, "web")
-        return RedirectResponse("/", status_code=303)
+        form = await request.form()
+        if form.get("addlist"):
+            _svc().discard(medicine_id, "web")
+            _shop().add_items([row["name"]], "web", from_medicine_id=medicine_id)
+            return RedirectResponse("/shopping", status_code=303)
+        if form.get("only"):
+            _svc().discard(medicine_id, "web")
+            return RedirectResponse("/", status_code=303)
+        # No explicit choice yet: show the confirmation page.
+        return templates.TemplateResponse(
+            request, "discard_confirm.html",
+            page_context(request, m=dict(row)))
 
     @router.post("/medicine/{medicine_id}/reread")
     async def reread(medicine_id: int):

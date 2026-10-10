@@ -65,7 +65,32 @@ class BotLogicTest(unittest.TestCase):
 
     def test_symptom_pl(self):
         conn, svc, a, b = self.make()
-        self.assertEqual([r["id"] for r in symptom_matches(conn, "headache")], [a])
+        self.assertEqual([r["id"] for r in symptom_matches(conn, ["headache"])], [a])
+
+    def test_symptom_word_parts(self):
+        conn, svc, a, b = self.make()
+        c = svc.add({"name": "Chemplek spray", "quantity": 1,
+                     "description_pl": "Lek stosowany miejscowo w bólu i stanach "
+                                       "zapalnych jamy ustnej i gardła."})
+        rows = symptom_matches(conn, ["ból gardła"])
+        self.assertIn(c, [r["id"] for r in rows])
+        # A word-part match also fires: "stan" matches "stanach".
+        rows = symptom_matches(conn, ["stan zapalny gardła"])
+        self.assertEqual(rows[0]["id"], c)
+
+    def test_symptom_no_match(self):
+        conn, svc, a, b = self.make()
+        self.assertEqual(symptom_matches(conn, ["totally unrelated xyz"]), [])
+
+    def test_symptom_multi_term_union(self):
+        conn, svc, a, b = self.make()
+        c = svc.add({"name": "Chemplek spray", "quantity": 1,
+                     "description_pl": "Lek stosowany miejscowo w bólu i stanach "
+                                       "zapalnych jamy ustnej i gardła."})
+        rows = symptom_matches(conn, ["stan zapalny gardła", "fever"])
+        self.assertEqual({r["id"] for r in rows}, {a, c})
+        # Best-scoring row first: three tokens hit the spray, one the tablet.
+        self.assertEqual(rows[0]["id"], c)
 
     def test_describe(self):
         conn, svc, a, b = self.make()
