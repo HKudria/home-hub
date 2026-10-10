@@ -351,6 +351,13 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   color: var(--muted);
   margin-bottom: 4px;
 }
+.add-form label.check-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--muted);
+}
 .add-form input.error, .add-form input.error:focus-visible {
   border-color: var(--berry);
   background: var(--berry-tint);

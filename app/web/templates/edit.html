@@ -18,6 +18,11 @@
   {% if error_expiry %}
   <p class="error-msg">{{ T('expiry_required') }}</p>
   {% endif %}
+  <label class="check-line">
+    <input type="checkbox" name="no_expiry" id="no_expiry" value="1"
+           {% if values.get('no_expiry') or no_expiry %}checked{% endif %}>
+    {{ T('no_expiry_checkbox') }}
+  </label>
 
   <label>
     <span>{{ T('form_quantity') }}</span>
@@ -44,4 +49,19 @@
 </form>
 
 <p><a class="back-link" href="/medicine/{{ values['id'] }}">&larr; {{ values['name'] }}</a></p>
+
+<script>
+  // "No expiry date": while checked, disable + clear the expiry input.
+  (function () {
+    var box = document.getElementById("no_expiry");
+    var expiry = document.querySelector('[name="expiry_date"]');
+    if (!box || !expiry) return;
+    function sync() {
+      expiry.disabled = box.checked;
+      if (box.checked) expiry.value = "";
+    }
+    box.addEventListener("change", sync);
+    sync();
+  })();
+</script>
 {% endblock %}

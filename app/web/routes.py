@@ -256,12 +256,15 @@ def build_web_router(services, conn, default_lang: str = "en", data_dir: str = "
     @router.post("/add")
     async def add_save(request: Request):
         form = await request.form()
-        expiry = _parse_expiry(form.get("expiry_date") or "")
-        if not expiry:
+        no_expiry = form.get("no_expiry")
+        expiry = None if no_expiry else _parse_expiry(
+            form.get("expiry_date") or "")
+        if not expiry and not no_expiry:
             values = {k: form.get(k, "") for k in _FORM_FIELDS}
             return templates.TemplateResponse(
                 request, "add.html",
-                page_context(request, values=values, error_expiry=True, units=UNITS),
+                page_context(request, values=values, error_expiry=True,
+                             units=UNITS, no_expiry=no_expiry),
                 status_code=400)
         photo_saved = (form.get("photo_saved") or "").strip()
         ai_failed = form.get("ai_failed") == "1"
@@ -393,15 +396,17 @@ def build_web_router(services, conn, default_lang: str = "en", data_dir: str = "
         if _svc().get(medicine_id) is None:
             raise HTTPException(status_code=404, detail="Medicine not found")
         form = await request.form()
-        expiry = _parse_expiry(form.get("expiry_date") or "")
+        no_expiry = form.get("no_expiry")
+        expiry = None if no_expiry else _parse_expiry(
+            form.get("expiry_date") or "")
         name = (form.get("name") or "").strip()
-        if not name or not expiry:
+        if not name or (not expiry and not no_expiry):
             values = {k: form.get(k, "") for k in _FORM_FIELDS if k not in
                       ("photo_saved", "ai_extracted", "ai_failed")}
             return templates.TemplateResponse(
                 request, "edit.html",
                 page_context(request, values=values, units=UNITS,
-                             error_expiry=True),
+                             error_expiry=True, no_expiry=no_expiry),
                 status_code=400)
         _svc().update(medicine_id, {
             "name": name,
