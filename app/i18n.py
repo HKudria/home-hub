@@ -69,6 +69,10 @@ MESSAGES: dict[str, dict[str, str]] = {
         "camera_hint": "The AI reads the photo automatically — you can fix everything before saving.",
         "quantity": "Quantity",
         "unit": "Unit",
+        "unit_pieces": "pieces",
+        "unit_packages": "packages",
+        "unit_ml": "ml",
+        "unit_mg": "mg",
         "low_stock_threshold": "Low stock alert",
         "discard_after_days": "Discard after opening (days)",
         "form_name": "Name",
@@ -180,6 +184,10 @@ MESSAGES: dict[str, dict[str, str]] = {
         "camera_hint": "AI odczyta zdjęcie automatycznie — przed zapisaniem możesz wszystko poprawić.",
         "quantity": "Ilość",
         "unit": "Jednostka",
+        "unit_pieces": "sztuki",
+        "unit_packages": "opakowania",
+        "unit_ml": "ml",
+        "unit_mg": "mg",
         "low_stock_threshold": "Alarm niskiego stanu",
         "discard_after_days": "Wyrzuć po otwarciu (dni)",
         "form_name": "Nazwa",
@@ -291,6 +299,10 @@ MESSAGES: dict[str, dict[str, str]] = {
         "camera_hint": "ИИ распознает фото автоматически — перед сохранением всё можно исправить.",
         "quantity": "Количество",
         "unit": "Единица",
+        "unit_pieces": "шт.",
+        "unit_packages": "упаковки",
+        "unit_ml": "мл",
+        "unit_mg": "мг",
         "low_stock_threshold": "Порог малого запаса",
         "discard_after_days": "Выбросить после вскрытия (дней)",
         "form_name": "Название",
@@ -402,6 +414,10 @@ MESSAGES: dict[str, dict[str, str]] = {
         "camera_hint": "ШІ розпізнає фото автоматично — перед збереженням все можна виправити.",
         "quantity": "Кількість",
         "unit": "Одиниця",
+        "unit_pieces": "шт.",
+        "unit_packages": "упаковки",
+        "unit_ml": "мл",
+        "unit_mg": "мг",
         "low_stock_threshold": "Поріг малого запасу",
         "discard_after_days": "Викинути після відкриття (днів)",
         "form_name": "Назва",
@@ -466,6 +482,16 @@ def t(lang: str, key: str, **kwargs) -> str:
     if kwargs:
         msg = msg.format(**kwargs)
     return msg
+
+
+KNOWN_UNITS = ("pieces", "packages", "ml", "mg")
+
+
+def unit_label(lang: str, unit: str) -> str:
+    """Translated unit for known keys; raw unit otherwise."""
+    if unit in KNOWN_UNITS:
+        return t(lang, "unit_" + unit)
+    return unit
 
 
 # Common Ukrainian words with no і/ї/є/ґ (e.g. "узяв", "взяв") would

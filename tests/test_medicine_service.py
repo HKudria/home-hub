@@ -21,6 +21,14 @@ class MedicineServiceTest(unittest.TestCase):
         self.assertEqual(row["name"], "Paracetamol 500")
         self.assertEqual(row["ai_status"], "ok")
 
+    def test_add_defaults_threshold_off(self):
+        # Threshold 0 = low-stock alerts off unless the user sets one
+        # (alerts.py only fires when threshold > 0).
+        svc, _ = self.make_svc()
+        mid = svc.add({"name": "A", "quantity": 20, "expiry_date": "2027-01-01"})
+        row = svc.get(mid)
+        self.assertEqual(row["low_stock_threshold"], 0)
+
     def test_list_all_nulls_last(self):
         svc, _ = self.make_svc()
         svc.add({"name": "NoDate"})

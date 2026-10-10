@@ -37,7 +37,7 @@
     <dd>{{ discard_date }} ({{ m.discard_after_days }})</dd>
     {% endif %}
     <dt>{{ T('form_quantity') }}</dt>
-    <dd>{{ "%g"|format(m.quantity) }} {{ m.unit }}</dd>
+    <dd>{{ "%g"|format(m.quantity) }} {% if m.unit in UNITS %}{{ T('unit_' ~ m.unit) }}{% else %}{{ m.unit }}{% endif %}</dd>
   </dl>
 
   <div class="actions">

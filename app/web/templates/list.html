@@ -37,7 +37,7 @@
   {% for m in expiring %}
   <li class="row expiring">
     <a class="row-title" href="/medicine/{{ m.id }}">{{ badge(m) }}{{ m.name }}</a>
-    <p class="row-meta">{{ "%g"|format(m.quantity) }} {{ m.unit }}</p>
+    <p class="row-meta">{{ "%g"|format(m.quantity) }} {% if m.unit in UNITS %}{{ T('unit_' ~ m.unit) }}{% else %}{{ m.unit }}{% endif %}</p>
     <p class="row-meta expiry">
       {% if m.expiry_date %}{{ m.expiry_date|shortdate }} ({{ m.days_until }}){% else %}{{ T('no_expiry') }}{% endif %}
     </p>
@@ -52,7 +52,7 @@
   {% for m in others %}
   <li class="row">
     <a class="row-title" href="/medicine/{{ m.id }}">{{ badge(m) }}{{ m.name }}</a>
-    <p class="row-meta">{{ "%g"|format(m.quantity) }} {{ m.unit }}</p>
+    <p class="row-meta">{{ "%g"|format(m.quantity) }} {% if m.unit in UNITS %}{{ T('unit_' ~ m.unit) }}{% else %}{{ m.unit }}{% endif %}</p>
     <p class="row-meta expiry">
       {% if m.expiry_date %}{{ m.expiry_date|shortdate }}{% else %}{{ T('no_expiry') }}{% endif %}
     </p>

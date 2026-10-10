@@ -21,7 +21,7 @@ from app.bot.notify import callback_to_action
 from app.bot.rule_agent import parse_rule_intent
 from app.bot.users import approve, decline, is_admin, is_allowed, request_approval
 from app.config import Settings
-from app.i18n import DEFAULT_LANG, t
+from app.i18n import DEFAULT_LANG, t, unit_label
 from app.services.medicine_service import MedicineService
 from app.services.shopping_service import ShoppingService
 from app.services.task_service import TaskService
@@ -73,7 +73,7 @@ def symptom_matches(conn: sqlite3.Connection, symptom: str) -> list:
 def describe_matches(rows, lang: str) -> str:
     lines = []
     for r in rows:
-        lines.append(f"• {r['name']} — {int(r['quantity'])} {r['unit']}")
+        lines.append(f"• {r['name']} — {int(r['quantity'])} {unit_label(lang, r['unit'])}")
     return "\n".join(lines)
 
 
@@ -95,7 +95,7 @@ def describe_matches_enhanced(rows, lang: str) -> str:
             if discard_by and discard_by < today:
                 warn = True
         mark = " ⚠️" if warn else ""
-        lines.append(f"• {r['name']} — {int(r['quantity'])} {r['unit']}{mark}")
+        lines.append(f"• {r['name']} — {int(r['quantity'])} {unit_label(lang, r['unit'])}{mark}")
     return "\n".join(lines)
 
 
@@ -251,14 +251,16 @@ def build_router(conn: sqlite3.Connection, settings: Settings,
                 await message.reply(t(lang, "last_dose", name=row["name"]))
             else:
                 await message.reply(t(lang, "took", name=row["name"],
-                                      qty=int(row["quantity"]), unit=row["unit"]))
+                                      qty=int(row["quantity"]),
+                                      unit=unit_label(lang, row["unit"])))
         elif action == "opened":
             today = datetime.date.today().isoformat()
             svc.mark_opened(med_id, today, actor)
             await message.reply(t(lang, "opened_on", name=row["name"], opened=today))
         elif action == "query_qty":
             await message.reply(t(lang, "took", name=row["name"],
-                                  qty=int(row["quantity"]), unit=row["unit"]))
+                                  qty=int(row["quantity"]),
+                                  unit=unit_label(lang, row["unit"])))
 
     async def reply_pick_buttons(message: Message, rows, amount: float):
         kb = InlineKeyboardBuilder()

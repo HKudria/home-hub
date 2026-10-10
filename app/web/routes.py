@@ -57,6 +57,7 @@ _FORM_FIELDS = (
 )
 
 UNITS = ("pieces", "packages", "ml", "mg")
+templates.env.globals["UNITS"] = UNITS
 
 
 def _days_until(date_str) -> int | None:

@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS medicines (
   discard_after_days INTEGER,
   quantity REAL NOT NULL DEFAULT 0,
   unit TEXT NOT NULL DEFAULT 'pieces',
-  low_stock_threshold REAL NOT NULL DEFAULT 3,
+  low_stock_threshold REAL NOT NULL DEFAULT 0,
   photo_path TEXT,
   ai_status TEXT NOT NULL DEFAULT 'needs_ai_data',
   low_stock_notified INTEGER NOT NULL DEFAULT 0,
