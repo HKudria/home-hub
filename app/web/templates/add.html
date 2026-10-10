@@ -30,6 +30,10 @@
     <span>{{ T('form_name') }} *</span>
     <input type="text" name="name" required value="{{ values.get('name', '') }}">
   </label>
+  <div class="fill-ai-row">
+    <button type="button" class="btn btn-secondary" id="fill-ai">{{ T('fill_ai') }}</button>
+    <p class="error-msg hidden" id="fill-ai-error">{{ T('fill_ai_error') }}</p>
+  </div>
   <label>
     <span>{{ T('form_ingredient') }}</span>
     <input type="text" name="active_ingredient" value="{{ values.get('active_ingredient', '') }}">
@@ -98,7 +102,9 @@
 <script>window.CAMERA_MSGS = {
   multiple: {{ T('multiple_warning') | tojson }},
   aiError: {{ T('ai_error') | tojson }},
-  aiOk: {{ T('ai_ok') | tojson }}
+  aiOk: {{ T('ai_ok') | tojson }},
+  fillAi: {{ T('fill_ai') | tojson }},
+  fillAiError: {{ T('fill_ai_error') | tojson }}
 };</script>
 <script src="/static/camera.js"></script>
 {% endblock %}

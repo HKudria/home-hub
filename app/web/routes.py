@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from starlette.datastructures import UploadFile
 
-from app.ai.client import extract_medicine
+from app.ai.client import extract_medicine, suggest_by_name
 from app.i18n import LANGS, t
 from app.services.medicine_service import MedicineService
 from app.services.shopping_service import ShoppingService
@@ -218,6 +218,22 @@ def build_web_router(services, conn, default_lang: str = "en", data_dir: str = "
         rel = f"photos/{uuid.uuid4().hex}.jpg"
         (Path(data_dir) / rel).write_bytes(blobs[0])
         payload["photo_saved"] = rel
+        return JSONResponse(payload)
+
+    @router.post("/suggest")
+    async def suggest(request: Request):
+        form = await request.form()
+        name = (form.get("name") or "").strip()
+        if settings is None or not name:
+            return JSONResponse({"error": True})
+        ext = await suggest_by_name(settings, name)
+        if ext is None or getattr(ext, "multiple", False) or not getattr(ext, "name", ""):
+            return JSONResponse({"error": True})
+        try:
+            payload = dataclasses.asdict(ext)
+        except TypeError:
+            # Non-dataclass payloads (test doubles).
+            payload = {f: getattr(ext, f, None) for f in _EXTRACT_FIELDS}
         return JSONResponse(payload)
 
     @router.post("/add")

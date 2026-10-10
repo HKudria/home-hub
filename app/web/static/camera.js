@@ -120,6 +120,45 @@
     if (el && value !== "") el.value = value;
   }
 
+  /* "Fill details with AI": the name was typed by hand, ask the AI to
+   * pre-fill the rest of the form from it. Expiry is never suggested. */
+  var fillAiBtn = document.getElementById("fill-ai");
+  if (fillAiBtn) {
+    var fillAiLabel = fillAiBtn.textContent;
+    var fillAiErr = document.getElementById("fill-ai-error");
+    fillAiBtn.addEventListener("click", function () {
+      var nameInput = document.querySelector('[name="name"]');
+      var name = (nameInput && nameInput.value || "").trim();
+      if (!name) return;
+      fillAiBtn.disabled = true;
+      fillAiBtn.textContent = "…";
+      if (fillAiErr) fillAiErr.classList.add("hidden");
+      (async function () {
+        try {
+          var fd = new FormData();
+          fd.append("name", name);
+          var r = await fetch("/suggest", { method: "POST", body: fd });
+          var data = await r.json();
+          if (data.error || !data.name) {
+            if (fillAiErr) fillAiErr.classList.remove("hidden");
+          } else {
+            setField("active_ingredient", data.active_ingredient);
+            setField("form", data.form);
+            ["pl", "ru", "uk", "en"].forEach(function (code) {
+              setField("dosage_" + code, data["dosage_" + code]);
+              setField("description_" + code, data["description_" + code]);
+            });
+          }
+        } catch (e) {
+          if (fillAiErr) fillAiErr.classList.remove("hidden");
+        } finally {
+          fillAiBtn.disabled = false;
+          fillAiBtn.textContent = fillAiLabel;
+        }
+      })();
+    });
+  }
+
   function upload() {
     if (!shot) return;
     var fd = new FormData();

@@ -1,6 +1,7 @@
 import io, json, pytest
 from unittest.mock import AsyncMock, patch
 from httpx import ASGITransport, AsyncClient
+from app.config import Settings
 from app.db import init_db
 from app.services.medicine_service import MedicineService
 from app.web.app_factory import create_test_app
@@ -57,6 +58,34 @@ async def test_extract_with_mocked_ai(tmp_path):
             r = await c.post("/extract", files=[("images", ("a.jpg", png(), "image/jpeg"))])
     assert r.status_code == 200
     assert json.loads(r.text)["name"] == "X"
+
+@pytest.mark.asyncio
+async def test_suggest_route(tmp_path):
+    conn = init_db(str(tmp_path / "t.db"))
+    app = create_test_app(conn, data_dir=str(tmp_path),
+                          settings=Settings("k", "http://x", "m", "m2", "t", 1, 9, "", ".", 14))
+    ext = AsyncMock(multiple=False, expiry_date=None,
+                    active_ingredient="paracetamol", form="tablets",
+                    dosage_pl="", dosage_ru="", dosage_uk="", dosage_en="",
+                    description_pl="", description_ru="", description_uk="",
+                    description_en="")
+    ext.name = "Paracetamol 500 mg"
+    with patch("app.web.routes.suggest_by_name", AsyncMock(return_value=ext)):
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c:
+            r = await c.post("/suggest", data={"name": "paracetamol"})
+    assert r.status_code == 200
+    assert json.loads(r.text)["name"] == "Paracetamol 500 mg"
+
+@pytest.mark.asyncio
+async def test_suggest_route_empty_name(tmp_path):
+    conn = init_db(str(tmp_path / "t.db"))
+    app = create_test_app(conn, data_dir=str(tmp_path),
+                          settings=Settings("k", "http://x", "m", "m2", "t", 1, 9, "", ".", 14))
+    with patch("app.web.routes.suggest_by_name", AsyncMock()) as fake:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c:
+            r = await c.post("/suggest", data={"name": "  "})
+    assert json.loads(r.text) == {"error": True}
+    assert not fake.called
 
 @pytest.mark.asyncio
 async def test_take_dose_route(tmp_path):

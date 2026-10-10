@@ -1,6 +1,6 @@
 import json, httpx, pytest
 from app.config import Settings
-from app.ai.client import parse_extraction, extract_medicine
+from app.ai.client import parse_extraction, extract_medicine, suggest_by_name
 
 RAW = {
     "name": "Paracetamol 500 mg",
@@ -56,3 +56,16 @@ async def test_extract_medicine_http_error(monkeypatch):
     monkeypatch.setattr(httpx.AsyncClient, "post", fake_post)
     s = Settings("k", "http://x", "m", "m2", "t", 1, 9, "", ".", 14)
     assert await extract_medicine(s, [b"img"]) is None
+
+@pytest.mark.asyncio
+async def test_suggest_by_name_http(monkeypatch):
+    async def fake_post(self, url, **kw):
+        assert url.endswith("/v1/messages"), url
+        raw = dict(RAW, expiry_date=None)
+        content = {"content": [{"type": "text", "text": json.dumps(raw)}]}
+        return httpx.Response(200, json=content, request=httpx.Request("POST", url))
+    monkeypatch.setattr(httpx.AsyncClient, "post", fake_post)
+    s = Settings("k", "http://x", "m", "m2", "t", 1, 9, "", ".", 14)
+    e = await suggest_by_name(s, "paracetamol")
+    assert e.name == "Paracetamol 500 mg"
+    assert e.expiry_date is None

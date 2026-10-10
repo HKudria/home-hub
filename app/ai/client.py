@@ -55,6 +55,37 @@ def parse_extraction(text: str) -> MedicineExtract | None:
         description_uk=data.get("description_uk", "") or "", description_en=data.get("description_en", "") or "",
         expiry_date=exp)
 
+SUGGEST_PROMPT = (
+    "You are a pharmacy assistant. For the given medicine name, return RAW JSON "
+    "(no markdown) with exactly these keys: name (the standard product name), "
+    "active_ingredient, form, dosage_pl, dosage_ru, dosage_uk, dosage_en, "
+    "description_pl, description_ru, description_uk, description_en, expiry_date: null. "
+    "dosage_*: typical usage in the given language. description_*: one short sentence "
+    "'what it is for' in the given language. If you don't know the medicine, reply "
+    "with {\"name\": \"\"} and empty strings."
+)
+
+async def suggest_by_name(settings, name: str) -> MedicineExtract | None:
+    """Pre-fill medicine details from a manually typed name via the
+    z.ai text model. Expiry is never suggested (expiry_date: null)."""
+    payload = {"model": settings.zai_text_model,
+               "max_tokens": 1024,
+               "system": SUGGEST_PROMPT,
+               "messages": [{"role": "user", "content": name}]}
+    try:
+        async with httpx.AsyncClient(timeout=60) as c:
+            r = await c.post(f"{settings.zai_base_url.rstrip('/')}/v1/messages",
+                             json=payload,
+                             headers={"x-api-key": settings.zai_api_key,
+                                      "anthropic-version": "2023-06-01"})
+            r.raise_for_status()
+            data = r.json()
+            text = "".join(b.get("text", "") for b in data.get("content", [])
+                           if isinstance(b, dict))
+    except (httpx.HTTPError, KeyError, IndexError, ValueError, TypeError):
+        return None
+    return parse_extraction(text)
+
 async def extract_medicine(settings, images: list[bytes]) -> MedicineExtract | None:
     """Extract medicine data from package photos via z.ai's Anthropic-compatible
     API (POST {base_url}/v1/messages with x-api-key auth)."""
