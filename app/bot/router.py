@@ -90,7 +90,7 @@ def _word_tokens(text: str) -> list:
     return [w for w in re.findall(r"[^\W\d_]+", text.lower()) if len(w) >= 4]
 
 
-def symptom_matches(conn: sqlite3.Connection, terms: list, limit: int = 3) -> list:
+def symptom_matches(conn: sqlite3.Connection, terms: list, limit: int = 4) -> list:
     """Weighted tokenized symptom search over name + ingredient + descriptions.
 
     `terms` is a list of symptom phrases (e.g. from the AI translator, so
@@ -130,7 +130,7 @@ def symptom_matches(conn: sqlite3.Connection, terms: list, limit: int = 3) -> li
             r["description_uk"], r["description_en"]))).lower()
         words = _word_tokens(text)
         best_ratio = 0.0
-        best_matched, specific = 0, False
+        best_matched, groups_covered, specific = 0, 0, False
         for g, g_weight in zip(groups, weights):
             matched = 0
             for tk in g:
@@ -140,18 +140,21 @@ def symptom_matches(conn: sqlite3.Connection, terms: list, limit: int = 3) -> li
                     matched += len(tk)
                     if len(tk) >= 5 or hit == tk:
                         specific = True
-            # Rank by the BEST single term group, not the sum over groups:
-            # summing favours medicines whose descriptions happen to echo
-            # several language variants of the symptom over medicines that
-            # match one language perfectly.
-            if matched / g_weight > best_ratio or (
-                    matched / g_weight == best_ratio and matched > best_matched):
-                best_ratio = matched / g_weight
+            ratio = min(1.0, matched / g_weight)
+            if ratio >= 0.6:
+                groups_covered += 1
+            # Rank by the BEST single term group (capped at 1.0), not the sum
+            # over groups: summing favours medicines whose descriptions echo
+            # several language variants over medicines that match one language
+            # perfectly.
+            if ratio > best_ratio or (
+                    ratio == best_ratio and matched > best_matched):
+                best_ratio = ratio
                 best_matched = matched
         if best_ratio >= 0.6 and specific:
-            scored.append((best_ratio, best_matched, r["id"], r))
-    scored.sort(key=lambda s: (-s[0], -s[1], s[2]))
-    return [r for _, _, _, r in scored[:limit]]
+            scored.append((groups_covered, best_ratio, best_matched, r["id"], r))
+    scored.sort(key=lambda s: (-s[0], -s[1], -s[2], s[3]))
+    return [r for _, _, _, _, r in scored[:limit]]
 
 
 def describe_matches(rows, lang: str) -> str:
