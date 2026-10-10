@@ -87,6 +87,11 @@ def _to_int(value, default=None):
         return default
 
 
+def _fmt_qty(v) -> str:
+    """2.0 -> '2', 2.5 -> '2.5' — quantities as humans write them."""
+    return f"{v:g}"
+
+
 def _parse_expiry(raw: str) -> str | None:
     """Accept full dates (2027-02-28) or month-year short forms (02/2027,
     2/2027, 2027-02, 02.2027) — month-year means the LAST day of that month.
@@ -271,8 +276,36 @@ def build_web_router(services, conn, default_lang: str = "en", data_dir: str = "
         ai_failed = form.get("ai_failed") == "1"
         ai_status = "needs_ai_data" if (ai_failed and photo_saved) else "ok"
         discard_after_days = _to_int(form.get("discard_after_days"))
+        name = (form.get("name") or "").strip()
+        quantity = _to_float(form.get("quantity"), 0.0)
+
+        # Same name (case-insensitive)? Ask the user: merge, keep separate,
+        # or cancel — unless the form already carries an explicit choice.
+        existing = conn.execute(
+            "SELECT * FROM medicines WHERE lower(name)=lower(?)", (name,)).fetchone()
+        if existing is not None and form.get("force") != "1":
+            merge_into = _to_int(form.get("merge_into"))
+            target = _svc().get(merge_into) if merge_into is not None else None
+            if target is not None:
+                _svc().update(target["id"], {
+                    "quantity": target["quantity"] + quantity,
+                    # Submitted (normalized) expiry wins; keep the current
+                    # one when the form didn't provide a new date.
+                    "expiry_date": expiry or target["expiry_date"],
+                })
+                return RedirectResponse(f"/medicine/{target['id']}", status_code=303)
+            # Text values only — multipart uploads can't be echoed hidden.
+            form_values = {k: v for k, v in form.multi_items()
+                           if isinstance(v, str)}
+            return templates.TemplateResponse(
+                request, "duplicate.html",
+                page_context(request, existing=existing, name=name,
+                             form_values=form_values,
+                             qty=_fmt_qty(existing["quantity"]),
+                             new_qty=_fmt_qty(quantity)))
+
         mid = _svc().add({
-            "name": (form.get("name") or "").strip(),
+            "name": name,
             "active_ingredient": (form.get("active_ingredient") or "").strip(),
             "form": (form.get("form") or "").strip(),
             "dosage_pl": (form.get("dosage_pl") or "").strip(),
@@ -284,7 +317,7 @@ def build_web_router(services, conn, default_lang: str = "en", data_dir: str = "
             "description_uk": (form.get("description_uk") or "").strip(),
             "description_en": (form.get("description_en") or "").strip(),
             "expiry_date": expiry,
-            "quantity": _to_float(form.get("quantity"), 0.0),
+            "quantity": quantity,
             "unit": (form.get("unit") or "pieces").strip(),
             "low_stock_threshold": _to_int(form.get("low_stock_threshold"), 3) or 0,
             "discard_after_days": discard_after_days,

@@ -147,3 +147,42 @@ async def test_edit_missing_404(tmp_path):
         assert r.status_code == 404
         r = await c.get("/medicine/999/edit")
         assert r.status_code == 404
+
+@pytest.mark.asyncio
+async def test_duplicate_shows_confirm(tmp_path):
+    conn = init_db(str(tmp_path / "t.db"))
+    MedicineService(conn).add({"name": "A", "quantity": 2, "expiry_date": "2027-01-01"})
+    app = create_test_app(conn, data_dir=str(tmp_path))
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c:
+        r = await c.post("/add", data={"name": "a", "quantity": "5",
+                                       "expiry_date": "2027-01-01"})
+    assert r.status_code == 200
+    assert "merge_into" in r.text
+    assert conn.execute("SELECT COUNT(*) c FROM medicines").fetchone()["c"] == 1
+
+@pytest.mark.asyncio
+async def test_merge_into_existing(tmp_path):
+    conn = init_db(str(tmp_path / "t.db"))
+    mid = MedicineService(conn).add({"name": "A", "quantity": 2, "expiry_date": "2027-01-01"})
+    app = create_test_app(conn, data_dir=str(tmp_path))
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c:
+        r = await c.post("/add", data={"name": "a", "quantity": "5",
+                                       "expiry_date": "2027-02-02",
+                                       "merge_into": str(mid)},
+                         follow_redirects=True)
+        assert r.status_code == 200
+    row = conn.execute("SELECT * FROM medicines WHERE id=?", (mid,)).fetchone()
+    assert row["quantity"] == 7 and row["expiry_date"] == "2027-02-02"
+    assert conn.execute("SELECT COUNT(*) c FROM medicines").fetchone()["c"] == 1
+
+@pytest.mark.asyncio
+async def test_force_adds_separate(tmp_path):
+    conn = init_db(str(tmp_path / "t.db"))
+    MedicineService(conn).add({"name": "A", "quantity": 2, "expiry_date": "2027-01-01"})
+    app = create_test_app(conn, data_dir=str(tmp_path))
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c:
+        r = await c.post("/add", data={"name": "a", "quantity": "5",
+                                       "expiry_date": "2027-01-01", "force": "1"},
+                         follow_redirects=True)
+        assert r.status_code == 200
+    assert conn.execute("SELECT COUNT(*) c FROM medicines").fetchone()["c"] == 2

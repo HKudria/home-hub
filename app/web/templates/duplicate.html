@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<h2 class="page-title">{{ T('dup_title') }}</h2>
+
+<section class="card">
+  <p>
+    {% if existing['expiry_date'] %}
+      {{ T('dup_exists', name=name, qty=qty, unit=existing['unit'],
+           date=existing['expiry_date'] | shortdate) }}
+    {% else %}
+      {{ T('dup_exists', name=name, qty=qty, unit=existing['unit'], date=T('no_expiry')) }}
+    {% endif %}
+  </p>
+
+  <form method="post" action="/add" class="action-form">
+    {% for k, v in form_values.items() %}
+    <input type="hidden" name="{{ k }}" value="{{ v }}">
+    {% endfor %}
+    <input type="hidden" name="merge_into" value="{{ existing['id'] }}">
+    <button type="submit" class="btn btn-solid">{{ T('dup_merge', qty=new_qty) }}</button>
+  </form>
+
+  <form method="post" action="/add" class="action-form">
+    {% for k, v in form_values.items() %}
+    <input type="hidden" name="{{ k }}" value="{{ v }}">
+    {% endfor %}
+    <input type="hidden" name="force" value="1">
+    <button type="submit" class="btn btn-solid">{{ T('dup_separate') }}</button>
+  </form>
+
+  <a href="/add" class="btn btn-secondary">{{ T('dup_cancel') }}</a>
+</section>
+{% endblock %}
