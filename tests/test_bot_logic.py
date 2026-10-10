@@ -1,95 +1,160 @@
+import os
+import sys
+import tempfile
+import types
+import unittest
+
+# router.py imports httpx and aiogram at module level; stub them when missing
+# so this suite runs anywhere. The helpers under test are pure stdlib +
+# sqlite and never touch the network or Telegram.
+try:
+    import httpx  # noqa: F401
+except ImportError:
+    sys.modules["httpx"] = types.ModuleType("httpx")
+
+try:
+    import aiogram  # noqa: F401
+except ImportError:
+    class _Stub:
+        def __init__(self, *args, **kwargs):
+            for k, v in kwargs.items():
+                setattr(self, k, v)
+
+    def _stub_module(name, **attrs):
+        mod = types.ModuleType(name)
+        for k, v in attrs.items():
+            setattr(mod, k, v)
+        sys.modules[name] = mod
+
+    _stub_module("aiogram", Bot=_Stub, F=_Stub(), Router=_Stub)
+    _stub_module("aiogram.filters", Command=_Stub)
+    _stub_module("aiogram.types", CallbackQuery=_Stub, KeyboardButton=_Stub,
+                 Message=_Stub, ReplyKeyboardMarkup=_Stub)
+    _stub_module("aiogram.utils")
+    _stub_module("aiogram.utils.keyboard", InlineKeyboardBuilder=_Stub)
+
 from app.db import init_db
 from app.services.medicine_service import MedicineService
 from app.services.shopping_service import ShoppingService
 from app.bot.router import (match_medicines, symptom_matches, describe_matches,
                             parse_pick_data, format_list_contents,
-                            format_open_tasks, match_template, main_keyboard)
+                            format_open_tasks, match_template, main_keyboard,
+                            fuzzy_matches)
 
-def make(tmp_path):
-    conn = init_db(str(tmp_path / "t.db"))
-    svc = MedicineService(conn)
-    a = svc.add({"name": "Paracetamol 500", "quantity": 10,
-                 "description_en": "Pain and fever relief.",
-                 "description_pl": "Lek na ból i gorączkę."})
-    b = svc.add({"name": "Paracetamol kids", "quantity": 5})
-    return conn, svc, a, b
 
-def test_match_one(tmp_path):
-    conn, svc, a, b = make(tmp_path)
-    assert [r["id"] for r in match_medicines(conn, "500")] == [a]
+class BotLogicTest(unittest.TestCase):
 
-def test_match_two_ambiguous(tmp_path):
-    conn, svc, a, b = make(tmp_path)
-    assert len(match_medicines(conn, "paracetamol")) == 2
+    def make(self, name_a="Paracetamol 500", name_b="Paracetamol kids"):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        conn = init_db(os.path.join(tmp.name, "t.db"))
+        svc = MedicineService(conn)
+        a = svc.add({"name": name_a, "quantity": 10,
+                     "description_en": "Pain and fever relief.",
+                     "description_pl": "Lek na ból i gorączkę."})
+        b = svc.add({"name": name_b, "quantity": 5})
+        return conn, svc, a, b
 
-def test_symptom_pl(tmp_path):
-    conn, svc, a, b = make(tmp_path)
-    assert [r["id"] for r in symptom_matches(conn, "headache")] == [a]
+    def test_match_one(self):
+        conn, svc, a, b = self.make()
+        self.assertEqual([r["id"] for r in match_medicines(conn, "500")], [a])
 
-def test_describe(tmp_path):
-    conn, svc, a, b = make(tmp_path)
-    rows = match_medicines(conn, "paracetamol")
-    s = describe_matches(rows, "en")
-    assert "Paracetamol 500" in s and "10 pieces" in s
+    def test_match_two_ambiguous(self):
+        conn, svc, a, b = self.make()
+        self.assertEqual(len(match_medicines(conn, "paracetamol")), 2)
 
-def test_parse_pick_data():
-    assert parse_pick_data("pick:12:1") == (12, 1.0)
-    assert parse_pick_data("pick:7:2.5") == (7, 2.5)
-    assert parse_pick_data("pick:9") == (9, 1.0)
+    def test_symptom_pl(self):
+        conn, svc, a, b = self.make()
+        self.assertEqual([r["id"] for r in symptom_matches(conn, "headache")], [a])
 
-def test_format_list_contents(tmp_path):
-    conn = init_db(str(tmp_path / "shop.db"))
-    svc = ShoppingService(conn)
-    svc.add_items(["milk", "bread"], "Tester")
-    rows = svc.list_unbought()
-    assert format_list_contents(rows, "en") == "Shopping list:\n• milk\n• bread"
+    def test_describe(self):
+        conn, svc, a, b = self.make()
+        rows = match_medicines(conn, "paracetamol")
+        s = describe_matches(rows, "en")
+        self.assertIn("Paracetamol 500", s)
+        self.assertIn("10 pieces", s)
 
-def test_format_list_contents_empty():
-    assert format_list_contents([], "en") == ""
+    def test_parse_pick_data(self):
+        self.assertEqual(parse_pick_data("pick:12:1"), (12, 1.0))
+        self.assertEqual(parse_pick_data("pick:7:2.5"), (7, 2.5))
+        self.assertEqual(parse_pick_data("pick:9"), (9, 1.0))
 
-def test_format_open_tasks_overdue():
-    rows = [{"title": "pay bills", "due_date": "2026-10-01",
-             "assignee_name": "Anna"}]
-    assert format_open_tasks(rows, "en", "2026-10-08") == \
-        "Open tasks:\n• OVERDUE pay bills — due 2026-10-01 → Anna"
+    def test_format_list_contents(self):
+        conn = init_db(os.path.join(self.tmpdir(), "shop.db"))
+        svc = ShoppingService(conn)
+        svc.add_items(["milk", "bread"], "Tester")
+        rows = svc.list_unbought()
+        self.assertEqual(format_list_contents(rows, "en"),
+                         "Shopping list:\n• milk\n• bread")
 
-def test_format_open_tasks_due_today():
-    rows = [{"title": "water plants", "due_date": "2026-10-08",
-             "assignee_name": "Anna"}]
-    assert format_open_tasks(rows, "en", "2026-10-08") == \
-        "Open tasks:\n• water plants — due 2026-10-08 → Anna"
+    def test_format_list_contents_empty(self):
+        self.assertEqual(format_list_contents([], "en"), "")
 
-def test_format_open_tasks_no_due():
-    rows = [{"title": "tidy up", "due_date": None, "assignee_name": "Anna"}]
-    assert format_open_tasks(rows, "en", "2026-10-08") == \
-        "Open tasks:\n• tidy up → Anna"
+    def test_format_open_tasks_overdue(self):
+        rows = [{"title": "pay bills", "due_date": "2026-10-01",
+                 "assignee_name": "Anna"}]
+        self.assertEqual(format_open_tasks(rows, "en", "2026-10-08"),
+                         "Open tasks:\n• OVERDUE pay bills — due 2026-10-01 → Anna")
 
-def test_format_open_tasks_no_assignee():
-    rows = [{"title": "buy salt", "due_date": "2026-10-08", "assignee_name": None}]
-    assert format_open_tasks(rows, "en", "2026-10-08") == \
-        "Open tasks:\n• buy salt — due 2026-10-08"
+    def test_format_open_tasks_due_today(self):
+        rows = [{"title": "water plants", "due_date": "2026-10-08",
+                 "assignee_name": "Anna"}]
+        self.assertEqual(format_open_tasks(rows, "en", "2026-10-08"),
+                         "Open tasks:\n• water plants — due 2026-10-08 → Anna")
 
-def test_format_open_tasks_empty():
-    assert format_open_tasks([], "en", "2026-10-08") == ""
+    def test_format_open_tasks_no_due(self):
+        rows = [{"title": "tidy up", "due_date": None, "assignee_name": "Anna"}]
+        self.assertEqual(format_open_tasks(rows, "en", "2026-10-08"),
+                         "Open tasks:\n• tidy up → Anna")
 
-def test_match_template_en():
-    assert match_template("🛒 Shopping list", "en") == "showlist"
-    assert match_template("☑ Tasks", "en") == "showtasks"
-    assert match_template("⏰ Expiring soon?", "en") == "expiring"
-    assert match_template("🌐 Language", "en") == "language"
-    assert match_template("took a pill", "en") is None
-    assert match_template("  🛒 Shopping list  ", "en") == "showlist"
+    def test_format_open_tasks_no_assignee(self):
+        rows = [{"title": "buy salt", "due_date": "2026-10-08", "assignee_name": None}]
+        self.assertEqual(format_open_tasks(rows, "en", "2026-10-08"),
+                         "Open tasks:\n• buy salt — due 2026-10-08")
 
-def test_match_template_pl():
-    assert match_template("🛒 Lista zakupów", "pl") == "showlist"
-    assert match_template("☑ Zadania", "pl") == "showtasks"
-    assert match_template("⏰ Co się kończy?", "pl") == "expiring"
-    assert match_template("🌐 Język", "pl") == "language"
-    # Button text in one language must not match another language.
-    assert match_template("🛒 Shopping list", "pl") is None
+    def test_format_open_tasks_empty(self):
+        self.assertEqual(format_open_tasks([], "en", "2026-10-08"), "")
 
-def test_main_keyboard_layout():
-    kb = main_keyboard("en")
-    assert kb.resize_keyboard is True and kb.is_persistent is True
-    assert [btn.text for row in kb.keyboard for btn in row] == [
-        "🛒 Shopping list", "☑ Tasks", "⏰ Expiring soon?", "🌐 Language"]
+    def test_match_template_en(self):
+        self.assertEqual(match_template("🛒 Shopping list", "en"), "showlist")
+        self.assertEqual(match_template("☑ Tasks", "en"), "showtasks")
+        self.assertEqual(match_template("⏰ Expiring soon?", "en"), "expiring")
+        self.assertEqual(match_template("🌐 Language", "en"), "language")
+        self.assertIsNone(match_template("took a pill", "en"))
+        self.assertEqual(match_template("  🛒 Shopping list  ", "en"), "showlist")
+
+    def test_match_template_pl(self):
+        self.assertEqual(match_template("🛒 Lista zakupów", "pl"), "showlist")
+        self.assertEqual(match_template("☑ Zadania", "pl"), "showtasks")
+        self.assertEqual(match_template("⏰ Co się kończy?", "pl"), "expiring")
+        self.assertEqual(match_template("🌐 Język", "pl"), "language")
+        # Button text in one language must not match another language.
+        self.assertIsNone(match_template("🛒 Shopping list", "pl"))
+
+    def test_main_keyboard_layout(self):
+        kb = main_keyboard("en")
+        self.assertTrue(kb.resize_keyboard)
+        self.assertTrue(kb.is_persistent)
+        self.assertEqual([btn.text for row in kb.keyboard for btn in row],
+                         ["🛒 Shopping list", "☑ Tasks",
+                          "⏰ Expiring soon?", "🌐 Language"])
+
+    def test_fuzzy_matches_typo(self):
+        conn, svc, a, b = self.make(
+            name_a="Łosz Plastry z kwasem salicylowym na odciski")
+        rows = fuzzy_matches(conn, "plaster na odcsiki")
+        self.assertTrue(rows)
+        self.assertEqual(rows[0]["id"], a)
+
+    def test_fuzzy_matches_none(self):
+        conn, svc, a, b = self.make()
+        self.assertEqual(fuzzy_matches(conn, "completely different thing xyz"), [])
+
+    def tmpdir(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        return tmp.name
+
+
+if __name__ == "__main__":
+    unittest.main()

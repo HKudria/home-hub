@@ -6,6 +6,7 @@ shared sqlite connection and the services dict
 """
 
 import datetime
+import difflib
 import json
 import re
 import sqlite3
@@ -51,6 +52,37 @@ def match_medicines(conn: sqlite3.Connection, query: str) -> list:
     return conn.execute(
         "SELECT * FROM medicines WHERE lower(name) LIKE ? OR lower(active_ingredient) LIKE ? "
         "ORDER BY id", (q, q)).fetchall()
+
+
+def fuzzy_matches(conn: sqlite3.Connection, query: str, table: str = "medicines",
+                  limit: int = 4) -> list:
+    """Fuzzy-find rows when the exact LIKE search came up empty.
+
+    Token-level difflib matching: every query token (>=3 chars) must reach
+    a 0.75 similarity ratio against some token of the row's text (this
+    accepts inflection/typo pairs like plaster/plastry or odcsiki/odciski).
+    Rows are ranked by the share of query tokens matched, then by id;
+    only rows scoring above 0 are returned. `table` selects the searched
+    text: "medicines" (name), "shopping_items" (name) or "tasks" (title).
+    """
+    text_col = "title" if table == "tasks" else "name"
+    q_tokens = [tok for tok in query.lower().split() if len(tok) >= 3]
+    if not q_tokens:
+        return []
+    scored = []
+    for r in conn.execute(f"SELECT * FROM {table}").fetchall():
+        n_tokens = r[text_col].lower().split()
+        matched = 0
+        for qt in q_tokens:
+            best = max((difflib.SequenceMatcher(None, qt, nt).ratio()
+                        for nt in n_tokens), default=0.0)
+            if best >= 0.75:
+                matched += 1
+        score = matched / len(q_tokens)
+        if score > 0:
+            scored.append((score, r["id"], r))
+    scored.sort(key=lambda s: (-s[0], s[1]))
+    return [r for _, _, r in scored[:limit]]
 
 
 def _like_all(conn: sqlite3.Connection, term: str) -> list:
@@ -261,12 +293,27 @@ def build_router(conn: sqlite3.Connection, settings: Settings,
             await message.reply(t(lang, "took", name=row["name"],
                                   qty=int(row["quantity"]),
                                   unit=unit_label(lang, row["unit"])))
+        elif action == "bought":
+            svc_shop = services.get("shopping") or ShoppingService(conn)
+            item = svc_shop.check_off(str(med_id), actor)
+            if item is None:
+                await message.reply(t(lang, "no_match"))
+            else:
+                await message.reply(t(lang, "list_bought", name=item["name"]))
+        elif action == "donetask":
+            svc_tasks = services.get("tasks") or TaskService(conn)
+            task = svc_tasks.complete(str(med_id), actor)
+            if task is None:
+                await message.reply(t(lang, "no_match"))
+            else:
+                await message.reply(t(lang, "task_done", title=task["title"]))
 
-    async def reply_pick_buttons(message: Message, rows, amount: float):
+    async def reply_pick_buttons(message: Message, rows, amount: float,
+                                 key: str = "which_one", label_col: str = "name"):
         kb = InlineKeyboardBuilder()
         for r in rows:
-            kb.button(text=r["name"], callback_data=f"pick:{r['id']}:{int(amount)}")
-        await message.reply(t(get_user_lang(conn, message.from_user.id), "which_one"),
+            kb.button(text=r[label_col], callback_data=f"pick:{r['id']}:{int(amount)}")
+        await message.reply(t(get_user_lang(conn, message.from_user.id), key),
                             reply_markup=kb.as_markup())
 
     async def send_expiring(message: Message, lang: str):
@@ -376,7 +423,14 @@ def build_router(conn: sqlite3.Connection, settings: Settings,
             rows = match_medicines(conn, query)
             amount = intent.amount if intent.action == "take" else 1
             if not rows:
-                await message.reply(t(lang, "no_match"))
+                # No exact match: offer fuzzy "did you mean" candidates.
+                candidates = fuzzy_matches(conn, query)
+                if candidates:
+                    PENDING[(message.chat.id, tg_id)] = intent.action
+                    await reply_pick_buttons(message, candidates, amount,
+                                             key="maybe")
+                else:
+                    await message.reply(t(lang, "no_match"))
             elif len(rows) > 1:
                 PENDING[(message.chat.id, tg_id)] = intent.action
                 await reply_pick_buttons(message, rows, amount)
@@ -421,7 +475,15 @@ def build_router(conn: sqlite3.Connection, settings: Settings,
             if row:
                 await message.reply(t(lang, "list_bought", name=row["name"]))
             else:
-                await message.reply(t(lang, "no_match"))
+                # No exact match: offer fuzzy candidates (unbought only).
+                candidates = [r for r in fuzzy_matches(
+                    conn, intent.medicine_query or text.strip(),
+                    table="shopping_items") if not r["bought"]]
+                if candidates:
+                    PENDING[(message.chat.id, tg_id)] = "bought"
+                    await reply_pick_buttons(message, candidates, 1, key="maybe")
+                else:
+                    await message.reply(t(lang, "no_match"))
 
         elif intent.action == "showlist":
             svc_shop = services.get("shopping") or ShoppingService(conn)
@@ -474,7 +536,16 @@ def build_router(conn: sqlite3.Connection, settings: Settings,
             if row:
                 await message.reply(t(lang, "task_done", title=row["title"]))
             else:
-                await message.reply(t(lang, "no_match"))
+                # No exact match: offer fuzzy candidates (open tasks only).
+                candidates = [r for r in fuzzy_matches(
+                    conn, intent.medicine_query or text.strip(),
+                    table="tasks") if not r["done"]]
+                if candidates:
+                    PENDING[(message.chat.id, tg_id)] = "donetask"
+                    await reply_pick_buttons(message, candidates, 1, key="maybe",
+                                             label_col="title")
+                else:
+                    await message.reply(t(lang, "no_match"))
 
         elif intent.action == "showtasks":
             svc_tasks = services.get("tasks") or TaskService(conn)
