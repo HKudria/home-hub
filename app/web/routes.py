@@ -1,5 +1,6 @@
 """Web UI routes: medicine list, detail view + actions, add flow with
 camera capture and AI extraction."""
+import calendar
 import dataclasses
 import datetime
 import re
@@ -85,15 +86,31 @@ def _to_int(value, default=None):
         return default
 
 
-def _is_full_date(value: str) -> bool:
-    """Strict ISO calendar date (rejects e.g. 2026-13-01)."""
-    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
-        return False
-    try:
-        datetime.date.fromisoformat(value)
-    except ValueError:
-        return False
-    return True
+def _parse_expiry(raw: str) -> str | None:
+    """Accept full dates (2027-02-28) or month-year short forms (02/2027,
+    2/2027, 2027-02, 02.2027) — month-year means the LAST day of that month.
+    Returns normalized YYYY-MM-DD or None if invalid."""
+    raw = (raw or "").strip()
+    if not raw:
+        return None
+    m = re.fullmatch(r"(\d{4})-(\d{2})-(\d{2})", raw)
+    if m:
+        try:
+            datetime.date(int(m[1]), int(m[2]), int(m[3]))
+            return raw
+        except ValueError:
+            return None
+    m = re.fullmatch(r"(\d{1,2})[./](\d{4})", raw)  # MM/YYYY or MM.YYYY
+    if m:
+        month, year = int(m[1]), int(m[2])
+    else:
+        m = re.fullmatch(r"(\d{4})-(\d{1,2})", raw)  # YYYY-MM
+        if not m:
+            return None
+        year, month = int(m[1]), int(m[2])
+    if not 1 <= month <= 12:
+        return None
+    return f"{year:04d}-{month:02d}-{calendar.monthrange(year, month)[1]:02d}"
 
 
 def build_web_router(services, conn, default_lang: str = "en", data_dir: str = ".",
@@ -239,7 +256,7 @@ def build_web_router(services, conn, default_lang: str = "en", data_dir: str = "
     @router.post("/add")
     async def add_save(request: Request):
         form = await request.form()
-        expiry = (form.get("expiry_date") or "").strip()
+        expiry = _parse_expiry(form.get("expiry_date") or "")
         if not expiry:
             values = {k: form.get(k, "") for k in _FORM_FIELDS}
             return templates.TemplateResponse(
@@ -334,8 +351,8 @@ def build_web_router(services, conn, default_lang: str = "en", data_dir: str = "
     async def tasks_add(request: Request):
         form = await request.form()
         title = (form.get("title") or "").strip()
-        due = (form.get("due_date") or "").strip()
-        if not title or (due and not _is_full_date(due)):
+        due = _parse_expiry(form.get("due_date") or "")
+        if not title or (not due and (form.get("due_date") or "").strip()):
             return templates.TemplateResponse(
                 request, "tasks.html",
                 _tasks_ctx(request, values={"title": title, "due_date": due},
@@ -376,9 +393,9 @@ def build_web_router(services, conn, default_lang: str = "en", data_dir: str = "
         if _svc().get(medicine_id) is None:
             raise HTTPException(status_code=404, detail="Medicine not found")
         form = await request.form()
-        expiry = (form.get("expiry_date") or "").strip()
+        expiry = _parse_expiry(form.get("expiry_date") or "")
         name = (form.get("name") or "").strip()
-        if not name or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", expiry):
+        if not name or not expiry:
             values = {k: form.get(k, "") for k in _FORM_FIELDS if k not in
                       ("photo_saved", "ai_extracted", "ai_failed")}
             return templates.TemplateResponse(

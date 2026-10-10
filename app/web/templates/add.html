@@ -68,7 +68,8 @@
 
   <label>
     <span>{{ T('form_expiry') }} *</span>
-    <input type="date" name="expiry_date" required
+    <input type="text" name="expiry_date" required inputmode="numeric"
+           placeholder="MM/RRRR"
            class="{% if error_expiry %}error{% endif %}"
            value="{{ values.get('expiry_date', '') }}">
   </label>

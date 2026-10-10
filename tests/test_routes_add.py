@@ -112,13 +112,27 @@ async def test_edit_medicine(tmp_path):
     assert row["name"] == "A2" and row["quantity"] == 9 and row["expiry_date"] == "2027-02-02"
 
 @pytest.mark.asyncio
-async def test_edit_rejects_partial_expiry(tmp_path):
+async def test_edit_accepts_month_year_expiry(tmp_path):
     conn = init_db(str(tmp_path / "t.db"))
     mid = MedicineService(conn).add({"name": "A", "expiry_date": "2026-01-01"})
     app = create_test_app(conn, data_dir=str(tmp_path))
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c:
         r = await c.post(f"/medicine/{mid}/edit",
-                         data={"name": "A", "expiry_date": "2027-03"})
+                         data={"name": "A", "expiry_date": "2027-03"},
+                         follow_redirects=True)
+        assert r.status_code == 200
+    # Month-year means the LAST day of that month.
+    assert conn.execute("SELECT expiry_date FROM medicines WHERE id=?",
+                        (mid,)).fetchone()["expiry_date"] == "2027-03-31"
+
+@pytest.mark.asyncio
+async def test_edit_rejects_invalid_expiry(tmp_path):
+    conn = init_db(str(tmp_path / "t.db"))
+    mid = MedicineService(conn).add({"name": "A", "expiry_date": "2026-01-01"})
+    app = create_test_app(conn, data_dir=str(tmp_path))
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://t") as c:
+        r = await c.post(f"/medicine/{mid}/edit",
+                         data={"name": "A", "expiry_date": "13/2027"})
     assert r.status_code == 400
     assert conn.execute("SELECT expiry_date FROM medicines WHERE id=?",
                         (mid,)).fetchone()["expiry_date"] == "2026-01-01"
