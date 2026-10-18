@@ -325,6 +325,26 @@ def build_router(conn: sqlite3.Connection, settings: Settings,
                         med_id: int, amount: float):
         lang = get_user_lang(conn, tg_id)
         kb = main_keyboard(lang)
+        # Shopping/task actions reference shopping_items/tasks ids, NOT the
+        # medicines table — handle them before the medicine lookup.
+        if action == "bought":
+            svc_shop = services.get("shopping") or ShoppingService(conn)
+            item = svc_shop.check_off(str(med_id), actor)
+            if item is None:
+                await message.reply(t(lang, "no_match"), reply_markup=kb)
+            else:
+                await message.reply(t(lang, "list_bought", name=item["name"]),
+                                    reply_markup=kb)
+            return
+        if action == "donetask":
+            svc_tasks = services.get("tasks") or TaskService(conn)
+            task = svc_tasks.complete(str(med_id), actor)
+            if task is None:
+                await message.reply(t(lang, "no_match"), reply_markup=kb)
+            else:
+                await message.reply(t(lang, "task_done", title=task["title"]),
+                                    reply_markup=kb)
+            return
         row = svc.get(med_id)
         if row is None:
             await message.reply(t(lang, "no_match"), reply_markup=kb)
@@ -360,22 +380,6 @@ def build_router(conn: sqlite3.Connection, settings: Settings,
                                   qty=int(row["quantity"]),
                                   unit=unit_label(lang, row["unit"])),
                                 reply_markup=kb)
-        elif action == "bought":
-            svc_shop = services.get("shopping") or ShoppingService(conn)
-            item = svc_shop.check_off(str(med_id), actor)
-            if item is None:
-                await message.reply(t(lang, "no_match"), reply_markup=kb)
-            else:
-                await message.reply(t(lang, "list_bought", name=item["name"]),
-                                    reply_markup=kb)
-        elif action == "donetask":
-            svc_tasks = services.get("tasks") or TaskService(conn)
-            task = svc_tasks.complete(str(med_id), actor)
-            if task is None:
-                await message.reply(t(lang, "no_match"), reply_markup=kb)
-            else:
-                await message.reply(t(lang, "task_done", title=task["title"]),
-                                    reply_markup=kb)
 
     async def reply_pick_buttons(message: Message, rows, amount: float,
                                  key: str = "which_one", label_col: str = "name"):
