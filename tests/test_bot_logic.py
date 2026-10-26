@@ -149,10 +149,28 @@ class BotLogicTest(unittest.TestCase):
         self.assertIn("Paracetamol 500", s)
         self.assertIn("10 pieces", s)
 
-    def test_parse_pick_data(self):
-        self.assertEqual(parse_pick_data("pick:12:1"), (12, 1.0))
-        self.assertEqual(parse_pick_data("pick:7:2.5"), (7, 2.5))
-        self.assertEqual(parse_pick_data("pick:9"), (9, 1.0))
+    def test_parse_pick_data_legacy_3part(self):
+        """Old-format buttons (no kind) still parse as medicines."""
+        self.assertEqual(parse_pick_data("pick:12:1"), ("med", 12, 1.0))
+        self.assertEqual(parse_pick_data("pick:7:2.5"), ("med", 7, 2.5))
+        self.assertEqual(parse_pick_data("pick:9"), ("med", 9, 1.0))
+
+    def test_parse_pick_data_namespaced(self):
+        self.assertEqual(parse_pick_data("pick:med:5:2"), ("med", 5, 2.0))
+        self.assertEqual(parse_pick_data("pick:shop:6:1"), ("shop", 6, 1.0))
+        self.assertEqual(parse_pick_data("pick:task:3"), ("task", 3, 1.0))
+
+    def test_parse_pick_data_missing_amount(self):
+        self.assertEqual(parse_pick_data("pick:med:8"), ("med", 8, 1.0))
+        self.assertEqual(parse_pick_data("pick:shop:4"), ("shop", 4, 1.0))
+        self.assertEqual(parse_pick_data("pick:task:2:0"), ("task", 2, 0.0))
+
+    def test_parse_pick_data_garbage_raises(self):
+        """Non-numeric ids raise (contract: the callback handler catches)."""
+        with self.assertRaises(ValueError):
+            parse_pick_data("pick:abc:1")
+        with self.assertRaises((IndexError, ValueError)):
+            parse_pick_data("pick")
 
     def test_format_list_contents(self):
         conn = init_db(os.path.join(self.tmpdir(), "shop.db"))

@@ -29,8 +29,10 @@ from app.services.task_service import TaskService
 
 LANG_CODES = ("en", "pl", "ru", "uk")
 
-# Pending pick resolutions: {(chat_id, user_id): action}. The pick:<id>:<amount>
-# callback pops it; stale entries are simply overwritten by newer ones.
+# Pending pick resolutions: {(chat_id, user_id): action}. Only medicine
+# ambiguity needs it (the action comes from the user's sentence); shopping
+# and task picks carry their kind in the callback data. Stale entries are
+# simply overwritten by newer ones.
 PENDING: dict[tuple[int, int], str] = {}
 
 # The plain LIKE search cannot know that "headache" relates to "pain" when the
@@ -187,9 +189,22 @@ def describe_matches_enhanced(rows, lang: str) -> str:
 
 
 def parse_pick_data(data: str):
-    """Return (medicine_id, amount) from 'pick:<id>:<amount>'."""
+    """Return (kind, row_id, amount) from 'pick:<kind>:<id>[:<amount>]' where
+    kind is "med" (medicines), "shop" (shopping_items) or "task" (tasks).
+
+    The legacy 3-part format 'pick:<id>[:<amount>]' (no kind) is still
+    accepted and treated as kind "med": old inline keyboards may live on in
+    chats after a deploy. Garbage (non-numeric ids) raises, as before — the
+    callback handler catches everything.
+    """
     parts = data.split(":")
-    return int(parts[1]), float(parts[2]) if len(parts) > 2 and parts[2] else 1.0
+    if parts[1] in ("med", "shop", "task"):
+        kind, rest = parts[1], parts[2:]
+    else:
+        kind, rest = "med", parts[1:]
+    row_id = int(rest[0])
+    amount = float(rest[1]) if len(rest) > 1 and rest[1] else 1.0
+    return kind, row_id, amount
 
 
 def format_list_contents(rows, lang: str) -> str:
@@ -382,10 +397,12 @@ def build_router(conn: sqlite3.Connection, settings: Settings,
                                 reply_markup=kb)
 
     async def reply_pick_buttons(message: Message, rows, amount: float,
-                                 key: str = "which_one", label_col: str = "name"):
+                                 key: str = "which_one", label_col: str = "name",
+                                 kind: str = "med"):
         kb = InlineKeyboardBuilder()
         for r in rows:
-            kb.button(text=r[label_col], callback_data=f"pick:{r['id']}:{int(amount)}")
+            kb.button(text=r[label_col],
+                      callback_data=f"pick:{kind}:{r['id']}:{int(amount)}")
         await message.reply(t(get_user_lang(conn, message.from_user.id), key),
                             reply_markup=kb.as_markup())
 
@@ -594,7 +611,8 @@ def build_router(conn: sqlite3.Connection, settings: Settings,
                     table="shopping_items") if not r["bought"]]
                 if candidates:
                     PENDING[(message.chat.id, tg_id)] = "bought"
-                    await reply_pick_buttons(message, candidates, 1, key="maybe")
+                    await reply_pick_buttons(message, candidates, 1, key="maybe",
+                                             kind="shop")
                 else:
                     await message.reply(t(lang, "no_match"),
                                         reply_markup=main_keyboard(lang))
@@ -663,7 +681,7 @@ def build_router(conn: sqlite3.Connection, settings: Settings,
                 if candidates:
                     PENDING[(message.chat.id, tg_id)] = "donetask"
                     await reply_pick_buttons(message, candidates, 1, key="maybe",
-                                             label_col="title")
+                                             label_col="title", kind="task")
                 else:
                     await message.reply(t(lang, "no_match"),
                                         reply_markup=main_keyboard(lang))
@@ -687,15 +705,22 @@ def build_router(conn: sqlite3.Connection, settings: Settings,
 
             if data.startswith("pick:"):
                 # Parse before callback_to_action, which would crash on the
-                # colon-separated format ("pick:12:1" is not an int).
-                med_id, amount = parse_pick_data(data)
+                # colon-separated format ("pick:med:12:1" is not an int).
+                kind, row_id, amount = parse_pick_data(data)
                 tg_id = query.from_user.id
                 actor = actor_name(query.from_user)
-                chat_id = query.message.chat.id if query.message else 0
-                pending = PENDING.pop((chat_id, tg_id), None) or "take"
+                if kind == "shop":
+                    action = "bought"   # shopping ids: no PENDING needed
+                elif kind == "task":
+                    action = "donetask"  # task ids: no PENDING needed
+                else:
+                    # Medicine ambiguity: the action (take/opened/query_qty)
+                    # comes from the user's sentence, stored in PENDING.
+                    chat_id = query.message.chat.id if query.message else 0
+                    action = PENDING.pop((chat_id, tg_id), None) or "take"
                 if query.message:
                     await do_action(query.message, tg_id, actor,
-                                    pending, med_id, amount)
+                                    action, row_id, amount)
                 await query.answer()
                 return
 
